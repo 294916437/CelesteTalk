@@ -1,5 +1,6 @@
 # FastAPI Framework
-## library
+## libraries
+```
 annotated-types==0.6.0
 anyio==4.3.0
 bcrypt==4.1.2
@@ -30,3 +31,14 @@ sniffio==1.3.1
 starlette==0.37.2
 typing_extensions==4.11.0
 uvicorn==0.29.0
+```
+### about env
+make .env file on root 
+add content like below:
+```
+DATABASE_URL=value
+secret_key=value
+```
+### install the library
+**recommended python edition > 3.10**
+input "pip install -r requirements.txt" in root terminal to install
