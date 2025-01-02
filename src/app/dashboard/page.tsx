@@ -1,4 +1,4 @@
-import { SettingsDialog } from "@/components/settings-dialog";
+import { PostDialog } from "@/components/post-dialog";
 import { SidebarLeft } from "@/components/sidebar-left";
 import { SidebarRight } from "@/components/sidebar-right";
 import {
@@ -32,9 +32,11 @@ export default function Page() {
         </header>
         <div className='flex flex-1 flex-col gap-4 p-4'>
           <div className='mx-auto h-24 w-full max-w-3xl rounded-xl bg-muted/50'>
-            <SettingsDialog />
+            <PostDialog />
           </div>
-          <div className='mx-auto h-[100vh] w-full max-w-3xl rounded-xl bg-muted/50' />
+          <div className='mx-auto h-[100vh] w-full max-w-3xl rounded-xl bg-muted/50'>
+            {/* // TODO */}
+          </div>
         </div>
       </SidebarInset>
       <SidebarRight />
