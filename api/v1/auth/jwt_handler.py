@@ -3,7 +3,7 @@ from typing import Dict
 
 import jwt
 
-from config.config import Settings
+from server.init import Settings
 
 
 def token_response(token: str):
