@@ -14,7 +14,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
-import { cn } from "@/lib/utils";
+import { cn } from "@/utils/utils";
 import {
   Tooltip,
   TooltipContent,
@@ -25,39 +25,56 @@ import {
 interface PostDialogProps {
   user?: {
     name: string;
+    handle: string;
     avatar: string;
   };
+  onPost: (post: {
+    content: string;
+    media: { type: "image" | "video"; url: string }[];
+  }) => void;
 }
 
 export function PostDialog({
   user = {
     name: "用户",
+    handle: "@user",
     avatar: "/placeholder-avatar.jpg",
   },
+  onPost,
 }: PostDialogProps) {
   const [open, setOpen] = React.useState(false);
   const [content, setContent] = React.useState("");
-  const [images, setImages] = React.useState<string[]>([]);
+  const [media, setMedia] = React.useState<{ type: "image" | "video"; url: string }[]>([]);
   const [isUploading, setIsUploading] = React.useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
-  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleMediaUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (files && files.length > 0) {
       setIsUploading(true);
       try {
         // 模拟上传延迟
         await new Promise((resolve) => setTimeout(resolve, 1000));
-        const newImages = Array.from(files).map((file) => URL.createObjectURL(file));
-        setImages((prev) => [...prev, ...newImages].slice(0, 4)); // 最多4张图片
+        const newMedia = Array.from(files).map((file) => ({
+          type: file.type.startsWith("image/") ? ("image" as const) : ("video" as const),
+          url: URL.createObjectURL(file),
+        }));
+        setMedia((prev) => [...prev, ...newMedia].slice(0, 4)); // 最多4个媒体文件
       } finally {
         setIsUploading(false);
       }
     }
   };
 
-  const removeImage = (index: number) => {
-    setImages((prev) => prev.filter((_, i) => i !== index));
+  const removeMedia = (index: number) => {
+    setMedia((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handlePost = () => {
+    onPost({ content, media });
+    setContent("");
+    setMedia([]);
+    setOpen(false);
   };
 
   const MAX_CHARS = 280;
@@ -68,7 +85,7 @@ export function PostDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button size='lg' className='rounded-full font-semibold'>
+        <Button size='lg' className='rounded-full font-semibold w-full'>
           发帖
         </Button>
       </DialogTrigger>
@@ -90,26 +107,34 @@ export function PostDialog({
               maxLength={MAX_CHARS}
             />
             <ScrollArea className='h-full max-h-[300px] -mt-2 pr-4'>
-              {images.length > 0 && (
+              {media.length > 0 && (
                 <div
                   className={cn(
                     "grid gap-2 w-full",
-                    images.length === 1 && "grid-cols-1",
-                    images.length > 1 && "grid-cols-2"
+                    media.length === 1 && "grid-cols-1",
+                    media.length > 1 && "grid-cols-2"
                   )}>
-                  {images.map((img, index) => (
+                  {media.map((item, index) => (
                     <div key={index} className='relative group aspect-square'>
-                      <img
-                        src={img}
-                        alt=''
-                        className='rounded-xl object-cover w-full h-full'
-                        style={{ maxHeight: "250px" }}
-                      />
+                      {item.type === "image" ? (
+                        <img
+                          src={item.url}
+                          alt=''
+                          className='rounded-xl object-cover w-full h-full'
+                          style={{ maxHeight: "250px" }}
+                        />
+                      ) : (
+                        <video
+                          src={item.url}
+                          className='rounded-xl object-cover w-full h-full'
+                          style={{ maxHeight: "250px" }}
+                        />
+                      )}
                       <Button
                         size='icon'
                         variant='destructive'
                         className='absolute hidden group-hover:flex -top-2 -right-2 z-10'
-                        onClick={() => removeImage(index)}>
+                        onClick={() => removeMedia(index)}>
                         <X className='h-4 w-4' />
                       </Button>
                     </div>
@@ -124,10 +149,10 @@ export function PostDialog({
                     type='file'
                     hidden
                     ref={fileInputRef}
-                    onChange={handleImageUpload}
+                    onChange={handleMediaUpload}
                     multiple
                     accept='image/*,video/*'
-                    disabled={images.length >= 4}
+                    disabled={media.length >= 4}
                   />
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -136,7 +161,7 @@ export function PostDialog({
                         size='icon'
                         className='text-blue-500 hover:text-blue-600 hover:bg-blue-50'
                         onClick={() => fileInputRef.current?.click()}
-                        disabled={images.length >= 4 || isUploading}>
+                        disabled={media.length >= 4 || isUploading}>
                         {isUploading ? (
                           <Loader2 className='h-5 w-5 animate-spin' />
                         ) : (
@@ -154,7 +179,7 @@ export function PostDialog({
                         size='icon'
                         className='text-blue-500 hover:text-blue-600 hover:bg-blue-50'
                         onClick={() => fileInputRef.current?.click()}
-                        disabled={images.length >= 4 || isUploading}>
+                        disabled={media.length >= 4 || isUploading}>
                         <Video className='h-5 w-5' />
                       </Button>
                     </TooltipTrigger>
@@ -212,7 +237,10 @@ export function PostDialog({
                     </span>
                   </div>
                 )}
-                <Button className='rounded-full' disabled={isOverLimit || content.length === 0}>
+                <Button
+                  className='rounded-full'
+                  disabled={isOverLimit || content.length === 0}
+                  onClick={handlePost}>
                   发布
                 </Button>
               </div>

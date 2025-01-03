@@ -1,19 +1,41 @@
+"use client";
+
 import React from "react";
-import { cn } from "@/lib/utils";
+import { cn } from "@/utils/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Link from "next/link";
 import { AnimatedWrapper } from "./animated-wrapper";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { loginSchema } from "@/utils/validations/auth";
+import { useAuth } from "@/hooks/use-auth";
+import type { z } from "zod";
+
+type LoginFormValues = z.infer<typeof loginSchema>;
 
 export function LoginForm({ className, ...props }: React.ComponentProps<"div">) {
+  const { login, isLoggingIn } = useAuth();
+  const form = useForm<LoginFormValues>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: {
+      email: "",
+      password: "",
+    },
+  });
+
+  const onSubmit = async (data: LoginFormValues) => {
+    await login(data);
+  };
+
   return (
     <AnimatedWrapper>
       <div className={cn("flex flex-col gap-6", className)} {...props}>
         <Card className='overflow-hidden'>
           <CardContent className='grid p-0 md:grid-cols-2'>
-            <form className='p-6 md:p-8 bg-primary'>
+            <form onSubmit={form.handleSubmit(onSubmit)} className='p-6 md:p-8 bg-primary'>
               <div className='flex flex-col gap-6'>
                 <div className='flex flex-col items-center text-center'>
                   <h1 className='text-2xl font-bold'>欢迎回来</h1>
@@ -21,7 +43,17 @@ export function LoginForm({ className, ...props }: React.ComponentProps<"div">) 
                 </div>
                 <div className='grid gap-2'>
                   <Label htmlFor='email'>电子邮箱</Label>
-                  <Input id='email' type='email' placeholder='m@celeste.com' required />
+                  <Input
+                    id='email'
+                    type='email'
+                    placeholder='talk@celeste.com'
+                    {...form.register("email")}
+                  />
+                  {form.formState.errors.email && (
+                    <span className='text-sm text-red-500'>
+                      {form.formState.errors.email.message}
+                    </span>
+                  )}
                 </div>
                 <div className='grid gap-2'>
                   <div className='flex items-center'>
@@ -32,13 +64,18 @@ export function LoginForm({ className, ...props }: React.ComponentProps<"div">) 
                       忘记密码？
                     </Link>
                   </div>
-                  <Input id='password' type='password' required />
+                  <Input id='password' type='password' {...form.register("password")} />
+                  {form.formState.errors.password && (
+                    <span className='text-sm text-red-500'>
+                      {form.formState.errors.password.message}
+                    </span>
+                  )}
                 </div>
-                <Button type='submit' className='w-full'>
-                  登录
+                <Button type='submit' className='w-full' disabled={isLoggingIn}>
+                  {isLoggingIn ? "登录中..." : "登录"}
                 </Button>
                 <div className='relative text-center text-sm after:absolute after:inset-0 after:top-1/2 after:z-0 after:flex after:items-center after:border-t after:border-border'>
-                  <span className='relative z-10  px-2 text-muted-foreground'>或继续使用</span>
+                  <span className='relative z-10  px-2 text-muted-foreground'></span>
                 </div>
                 <div className='grid grid-cols-3 gap-4'>
                   <Button variant='outline' className='w-full'>
@@ -79,8 +116,8 @@ export function LoginForm({ className, ...props }: React.ComponentProps<"div">) 
             </form>
             <div className='relative hidden bg-primary-foreground md:block'>
               <img
-                src='/placeholder.svg'
-                alt='图片'
+                src='form-side.jpg'
+                alt='登录表单侧栏'
                 className='absolute inset-0 h-full w-full object-cover dark:brightness-[0.2] dark:grayscale'
               />
             </div>

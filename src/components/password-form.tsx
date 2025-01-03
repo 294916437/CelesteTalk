@@ -1,13 +1,56 @@
-import React from "react";
-import { cn } from "@/lib/utils";
+"use client";
+
+import React, { useState } from "react";
+import { cn } from "@/utils/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Link from "next/link";
 import { AnimatedWrapper } from "./animated-wrapper";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { resetPasswordSchema } from "@/utils/validations/auth";
+import { usePassword } from "@/hooks/use-password";
+import type { z } from "zod";
+
+type ResetPasswordFormValues = z.infer<typeof resetPasswordSchema>;
 
 export function PasswordForm({ className, ...props }: React.ComponentProps<"div">) {
+  const {
+    handleSendCode: sendCode,
+    handleSubmit: submitReset,
+    loading,
+    countdown,
+  } = usePassword();
+
+  const form = useForm<ResetPasswordFormValues>({
+    resolver: zodResolver(resetPasswordSchema),
+    defaultValues: {
+      email: "",
+      code: "",
+      password: "",
+    },
+  });
+
+  const handleSendCode = async () => {
+    const email = form.getValues("email");
+    if (!email || form.formState.errors.email) {
+      form.setFocus("email");
+      return;
+    }
+
+    await sendCode(email);
+  };
+
+  const onSubmit = async (values: ResetPasswordFormValues) => {
+    await submitReset({
+      email: values.email,
+      code: values.code,
+      password: values.password,
+    });
+  };
+
   return (
     <AnimatedWrapper>
       <div className={cn("flex flex-col gap-6", className)} {...props}>
@@ -15,12 +58,12 @@ export function PasswordForm({ className, ...props }: React.ComponentProps<"div"
           <CardContent className='grid p-0 md:grid-cols-2'>
             <div className='relative hidden bg-primary-foreground md:block'>
               <img
-                src='/placeholder.svg'
-                alt='图片'
+                src='form-side.jpg'
+                alt='密码表单侧栏'
                 className='absolute inset-0 h-full w-full object-cover dark:brightness-[0.2] dark:grayscale'
               />
             </div>
-            <form className='p-6 md:p-8 bg-primary'>
+            <form onSubmit={form.handleSubmit(onSubmit)} className='p-6 md:p-8 bg-primary'>
               <div className='flex flex-col gap-6'>
                 <div className='flex flex-col items-center text-center'>
                   <h1 className='text-2xl font-bold'>重置密码</h1>
@@ -30,7 +73,17 @@ export function PasswordForm({ className, ...props }: React.ComponentProps<"div"
                 </div>
                 <div className='grid gap-2'>
                   <Label htmlFor='email'>电子邮箱</Label>
-                  <Input id='email' type='email' placeholder='m@celeste.com' required />
+                  <Input
+                    id='email'
+                    type='email'
+                    placeholder='m@celeste.com'
+                    {...form.register("email")}
+                  />
+                  {form.formState.errors.email && (
+                    <span className='text-sm text-red-500'>
+                      {form.formState.errors.email.message}
+                    </span>
+                  )}
                 </div>
                 <div className='grid gap-2'>
                   <Label htmlFor='verification-code'>验证码</Label>
@@ -39,23 +92,50 @@ export function PasswordForm({ className, ...props }: React.ComponentProps<"div"
                       id='verification-code'
                       type='text'
                       placeholder='输入验证码'
-                      required
+                      {...form.register("code")}
                       className='flex-grow'
                     />
-                    <Button type='button' variant='outline' className='whitespace-nowrap'>
-                      获取验证码
+                    <Button
+                      type='button'
+                      variant='outline'
+                      className='whitespace-nowrap'
+                      onClick={handleSendCode}
+                      disabled={countdown > 0 || loading}>
+                      {countdown > 0
+                        ? `${countdown}秒后重试`
+                        : loading
+                        ? "发送中..."
+                        : "获取验证码"}
                     </Button>
                   </div>
+                  {form.formState.errors.code && (
+                    <span className='text-sm text-red-500'>
+                      {form.formState.errors.code.message}
+                    </span>
+                  )}
                 </div>
                 <div className='grid gap-2'>
-                  <Label htmlFor='new-password'>新密码</Label>
-                  <Input id='new-password' type='password' placeholder='输入新密码' required />
+                  <Label htmlFor='password'>新密码</Label>
+                  <Input
+                    id='password'
+                    type='password'
+                    placeholder='输入新密码'
+                    {...form.register("password")}
+                  />
+                  {form.formState.errors.password && (
+                    <span className='text-sm text-red-500'>
+                      {form.formState.errors.password.message}
+                    </span>
+                  )}
                 </div>
-                <Button type='submit' className='w-full'>
-                  重置密码
+                <Button
+                  type='submit'
+                  className='w-full'
+                  disabled={loading || form.formState.isSubmitting}>
+                  {form.formState.isSubmitting ? "重置中..." : "重置密码"}
                 </Button>
                 <div className='text-center text-sm'>
-                  记起密码了？{" "}
+                  想起密码了？{" "}
                   <Link href='/login' className='underline underline-offset-4'>
                     返回登录
                   </Link>
