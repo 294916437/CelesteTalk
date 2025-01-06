@@ -2,7 +2,7 @@ from beanie import PydanticObjectId
 from fastapi import APIRouter, HTTPException
 from models.User import User
 import logging
-from pydantic import ValidationError, EmailStr
+from pydantic import ValidationError
 from utils.common import hash_password, verify_password
 from utils.time import format_datetime_now
 from middleware.response import CommonResponse

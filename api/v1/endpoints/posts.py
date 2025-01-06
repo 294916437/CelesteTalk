@@ -1,14 +1,29 @@
 from datetime import datetime, timezone
 from typing import List
 from beanie import PydanticObjectId
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Body
 from models.Post import Post
 from models.Comment import Comment
+from utils.time import format_datetime_now
 import logging
-from pydantic import ValidationError
+from pydantic import ValidationError, BaseModel
 from middleware.response import CommonResponse
 logger = logging.getLogger(__name__)
 router = APIRouter()
+
+# 添加请求体模型
+class RepostRequest(BaseModel):
+    authorId: str
+    content: str
+
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "authorId": "507f1f77bcf86cd799439011",
+                "content": "转发内容"
+            }
+        }
+    }
 
 @router.get("", response_description="获取所有帖子")
 async def get_posts() -> List[Post]:
@@ -76,6 +91,41 @@ async def toggle_like(id: str, user_id: str):
     except Exception:
         raise HTTPException(status_code=400, detail="Invalid ID format")
 
+@router.post("/{postId}/repost", response_description="发布转发帖子")
+async def repost_post(
+    postId: str,
+    repost_data: RepostRequest
+):
+    try:
+        # 验证并获取原帖
+        original_post_id = PydanticObjectId(postId)
+        original_post = await Post.get(original_post_id)
+        if not original_post:
+            raise HTTPException(status_code=404, detail="Original post not found")
+
+        # 创建转发帖子
+        repost = Post(
+            authorId=PydanticObjectId(repost_data.authorId),
+            content=repost_data.content,
+            isRepost=True,
+            originalPost=original_post_id
+        )
+        await repost.insert()
+
+        # 更新原帖的转发计数（修改这部分）
+        original_post.repostCount += 1
+        original_post.updatedAt = format_datetime_now()
+        await original_post.save()  
+
+        return CommonResponse(
+            code=200,
+            msg="Repost created successfully",
+            data={"post": repost}
+        )
+    except Exception as e:
+        logger.error(f"Error in repost_post: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 @router.delete("/{id}", response_description="删除帖子")
 async def delete_post(id: str):
     try:
@@ -87,7 +137,7 @@ async def delete_post(id: str):
         return {"message": "Post deleted successfully"}
     except Exception:
         raise HTTPException(status_code=400, detail="Invalid post ID format")
-@router.get("/post/{post_id}", response_description="获取帖子的所有评论")
+@router.get("/{post_id}/comments", response_description="获取帖子的所有评论")
 async def get_post_comments(post_id: str) -> List[Comment]:
     try:
         post_id = PydanticObjectId(post_id)
@@ -101,13 +151,12 @@ async def get_post_comments(post_id: str) -> List[Comment]:
     
     
 @router.post("/{post_id}/comment", response_description="创建帖子的新评论")
-async def create_comment(data: dict):
-    post_id = data.get("post_id")
+async def create_comment(post_id:str,data: dict):
     content = data.get("content")
     author_id=data.get("author_id")
     try:
         post_id = PydanticObjectId(post_id)
-        author_id=PydanticObjectId(author_id)
+        author_id = PydanticObjectId(author_id)
         new_comment = Comment(
             postId=post_id,
             authorId=author_id,
