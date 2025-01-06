@@ -1,37 +1,63 @@
 from datetime import datetime
-import pytz
-from typing import List, Optional, Any
-from pydantic import  Field, model_validator
+from typing import List, Optional
+from pydantic import Field, model_validator
 from beanie import Document, PydanticObjectId
-from utils.common import format_datetime
-
-# 获取东八区时区
-CST = pytz.timezone('Asia/Shanghai')
+from utils.time import format_datetime_now
 
 class Comment(Document):
-    postId: PydanticObjectId
-    authorId: PydanticObjectId
-    content: str
-    likes: List[PydanticObjectId] = Field(default_factory=list)
-    replyTo: Optional[PydanticObjectId] = None
-    createdAt: datetime = Field(default_factory=lambda: format_datetime(datetime.now(CST)))
-    updatedAt: datetime = Field(default_factory=lambda: format_datetime(datetime.now(CST)))
+    # 必填字段
+    postId: PydanticObjectId = Field(..., description="帖子ID")
+    authorId: PydanticObjectId = Field(..., description="评论作者ID")
+    content: str = Field(..., description="评论内容")
+    
+    # 可选字段
+    likes: List[PydanticObjectId] = Field(
+        default_factory=list,
+        description="点赞用户ID列表"
+    )
+    replyTo: Optional[PydanticObjectId] = Field(
+        default=None,
+        description="回复的评论ID"
+    )
+    
+    # 时间字段
+    createdAt: datetime = Field(
+        default_factory=format_datetime_now,
+        description="创建时间"
+    )
+    updatedAt: datetime = Field(
+        default_factory=format_datetime_now,
+        description="更新时间"
+    )
 
     @model_validator(mode='before')
     @classmethod
-    def validate_data(cls, data: Any) -> Any:
-        if isinstance(data, dict):
-            # 确保likes字段存在
-            data.setdefault('likes', [])
-            
-            # 处理时间戳，使用东八区
-            now = format_datetime(datetime.now(CST))
-            if 'createdAt' not in data:
-                data['createdAt'] = now
-            if 'updatedAt' not in data:
-                data['updatedAt'] = now
+    def validate_data(cls, data: dict) -> dict:
+        if not isinstance(data, dict):
+            return data
+        
+        # 设置默认值
+        data.setdefault('likes', [])
+        
+        # 设置时间戳
+        now = format_datetime_now()
+        data.setdefault('createdAt', now)
+        data.setdefault('updatedAt', now)
 
         return data
 
     class Settings:
         name = "comments"
+        validate_on_save = True
+
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "postId": "507f1f77bcf86cd799439011",
+                "authorId": "507f1f77bcf86cd799439012",
+                "content": "这是一条测试评论",
+                "likes": [],
+                "replyTo": None
+            }
+        }
+    }

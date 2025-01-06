@@ -1,6 +1,12 @@
-from pydantic import BaseModel
+from typing import TypeVar, Optional, Generic, Any
+from pydantic import BaseModel, Field
 
-class CommonResponse(BaseModel):
+T = TypeVar('T')
+
+class CommonResponse(BaseModel, Generic[T]):
     code: int
     msg: str
-    data: dict
+    data: Optional[T] = Field(default=None)
+
+    class Config:
+        arbitrary_types_allowed = True  # 允许任意类型

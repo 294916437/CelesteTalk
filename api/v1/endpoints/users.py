@@ -3,7 +3,8 @@ from fastapi import APIRouter, HTTPException
 from models.User import User
 import logging
 from pydantic import ValidationError
-from utils.common import hash_password
+from utils.common import hash_password ,verify_password
+from utils.time import format_datetime_now
 from middleware.response import CommonResponse
 
 logger = logging.getLogger(__name__)
@@ -12,7 +13,11 @@ router = APIRouter()
 
 @router.get("/test")
 async def test():
-    return CommonResponse(code=200, msg="success", data={"test": "test"})
+    # 测试错误响应
+    raise HTTPException(status_code=500, detail="Test error")
+    
+    # 测试正常响应
+    # return CommonResponse(code=200, msg="success", data={"test": "test"})
 
 
 @router.get("", response_description="获取所有用户列表")
@@ -24,7 +29,6 @@ async def get_users():
         if not collection_exists:
             logger.warning("No documents found in users collection")
             return []
-
         # 直接使用Motor查询并转换为User对象
         raw_results = await collection.find({}).to_list(length=None)
         users = []
@@ -57,7 +61,7 @@ async def register_user(user_data: dict):
         existing_email = await User.find_one({"email": user_data["email"]})
         if existing_email:
             raise HTTPException(status_code=400, detail="Email already exists")
-
+        #TODO：检查邮箱验证码是否正确
         # 创建新用户实例
         new_user = User(
             username=user_data["username"],
@@ -66,16 +70,47 @@ async def register_user(user_data: dict):
         )
 
         # 保存到数据库
-        logger.info(f"Registering new user: {new_user}")
         await new_user.insert()
-
         return CommonResponse(code=200, msg="success", data={"user": new_user})
-
-    except ValidationError as ve:
-        logger.error(f"Validation error during registration: {str(ve)}")
-        raise HTTPException(status_code=400, detail=str(ve))
     except Exception as e:
         logger.error(f"Error in register_user: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/login", response_description="用户登录")
+async def login(credentials: dict):
+    try:
+        # 获取登录凭证
+        email = credentials.get("email")
+        password = credentials.get("password")
+
+        if not email or not password:
+            raise HTTPException(status_code=400, detail="Missing email or password")
+
+        user = await User.find_one( {"email": email})
+
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        # 验证密码
+        if not verify_password(password, user.passwordHash):
+            raise HTTPException(status_code=401, detail="Invalid password")
+
+        # 更新最后登录时间
+        user.status.lastLoginAt = format_datetime_now()  # 注意这里要调用函数
+        await user.save()
+
+        # 返回用户信息
+        return CommonResponse(
+            code=200, 
+            msg="Login successful",
+            data={"user": user}
+        )
+
+    except HTTPException as http_exc:
+        raise http_exc
+    except Exception as e:
+        logger.error(f"Error in login: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 

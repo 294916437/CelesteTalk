@@ -1,63 +1,84 @@
-from datetime import datetime, timezone
-from typing import List, Optional, Any, Literal
+from datetime import datetime
+from typing import List, Optional
 from pydantic import BaseModel, Field, model_validator
 from beanie import Document, PydanticObjectId
-import pytz
-from utils.common import format_datetime
-
-# 获取东八区时区
-CST = pytz.timezone('Asia/Shanghai')
+from utils.time import format_datetime_now
 
 class Media(BaseModel):
-    type: Literal["image", "video"]
-    url: str
+    type: str = Field(
+        ...,
+        enum=["image", "video"],
+        description="媒体类型，只能是image或video"
+    )
+    url: str = Field(..., description="媒体URL")
 
-    @classmethod
-    def from_dict(cls, data: dict) -> "Media":
-        if isinstance(data, str):
-            # 默认字符串视为图片链接
-            return cls(type="image", url=data)
-        
-        # 验证媒体类型
-        if data.get('type') not in ['image', 'video']:
-            raise ValueError("Media type must be either 'image' or 'video']")
-        return cls(**data)
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "type": "image",
+                "url": "https://example.com/image.jpg"
+            }
+        }
+    }
 
 class Post(Document):
-    authorId: PydanticObjectId
-    content: str
-    media: List[Media] = Field(default_factory=list)
-    likes: List[PydanticObjectId] = Field(default_factory=list)
-    repostCount: int = Field(default=0)
-    replyTo: Optional[PydanticObjectId] = None
-    isRepost: bool = Field(default=False)
-    originalPost: Optional[PydanticObjectId] = None
-    createdAt: datetime = Field(default_factory=lambda: format_datetime(datetime.now(CST)))
-    updatedAt: datetime = Field(default_factory=lambda: format_datetime(datetime.now(CST)))
+    # 必填字段
+    authorId: PydanticObjectId = Field(..., description="作者ID")
+    content: str = Field(..., description="帖子内容")
+    isRepost: bool = Field(..., description="是否是转发")
+    
+    # 可选字段，带默认值
+    media: List[Media] = Field(default_factory=list, description="媒体列表")
+    likes: List[PydanticObjectId] = Field(default_factory=list, description="点赞用户ID列表")
+    repostCount: int = Field(default=0, ge=0, description="转发数")
+    originalPost: Optional[PydanticObjectId] = Field(default=None, description="原始帖子ID")
+    replyTo: Optional[PydanticObjectId] = Field(default=None, description="回复的帖子ID")
+    
+    # 时间字段
+    createdAt: datetime = Field(
+        default_factory=format_datetime_now,
+        description="创建时间"
+    )
+    updatedAt: datetime = Field(
+        default_factory=format_datetime_now,
+        description="更新时间"
+    )
 
     @model_validator(mode='before')
     @classmethod
-    def validate_data(cls, data: Any) -> Any:
-        if isinstance(data, dict):
-            # 处理媒体数据
-            if 'media' in data and data['media']:
-                data['media'] = [Media.from_dict(m) for m in data['media']]
-            else:
-                data['media'] = []
+    def validate_data(cls, data: dict) -> dict:
+        if not isinstance(data, dict):
+            return data
             
-            # 确保likes字段存在
-            data.setdefault('likes', [])
-            data.setdefault('repostCount', 0)
-            data.setdefault('isRepost', False)
-            
-            # 处理时间戳，使用东八区
-            now = format_datetime(datetime.now(CST))
-            if 'createdAt' not in data:
-                data['createdAt'] = now
-            if 'updatedAt' not in data:
-                data['updatedAt'] = now
+        # 处理默认值
+        data.setdefault('media', [])
+        data.setdefault('likes', [])
+        data.setdefault('repostCount', 0)
+        data.setdefault('isRepost', False)
+        
+        # 处理时间字段
+        now = format_datetime_now()
+        data.setdefault('createdAt', now)
+        data.setdefault('updatedAt', now)
 
         return data
 
     class Settings:
         name = "posts"
+        validate_on_save = True
+
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "authorId": "507f1f77bcf86cd799439011",
+                "content": "这是一条测试帖子",
+                "isRepost": False,
+                "media": [
+                    {
+                        "type": "image",
+                        "url": "https://example.com/image.jpg"
+                    }
+                ]
+            }
+        }
+    }
