@@ -2,8 +2,8 @@ from beanie import PydanticObjectId
 from fastapi import APIRouter, HTTPException
 from models.User import User
 import logging
-from pydantic import ValidationError
-from utils.common import hash_password ,verify_password
+from pydantic import ValidationError, EmailStr
+from utils.common import hash_password, verify_password
 from utils.time import format_datetime_now
 from middleware.response import CommonResponse
 
@@ -15,7 +15,7 @@ router = APIRouter()
 async def test():
     # 测试错误响应
     raise HTTPException(status_code=500, detail="Test error")
-    
+
     # 测试正常响应
     # return CommonResponse(code=200, msg="success", data={"test": "test"})
 
@@ -61,7 +61,7 @@ async def register_user(user_data: dict):
         existing_email = await User.find_one({"email": user_data["email"]})
         if existing_email:
             raise HTTPException(status_code=400, detail="Email already exists")
-        #TODO：检查邮箱验证码是否正确
+        # TODO：检查邮箱验证码是否正确
         # 创建新用户实例
         new_user = User(
             username=user_data["username"],
@@ -79,6 +79,7 @@ async def register_user(user_data: dict):
 
 @router.post("/login", response_description="用户登录")
 async def login(credentials: dict):
+    # credentials{"email": "EmailStr", "password": "str"}
     try:
         # 获取登录凭证
         email = credentials.get("email")
@@ -87,7 +88,7 @@ async def login(credentials: dict):
         if not email or not password:
             raise HTTPException(status_code=400, detail="Missing email or password")
 
-        user = await User.find_one( {"email": email})
+        user = await User.find_one({"email": email})
 
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
@@ -102,7 +103,7 @@ async def login(credentials: dict):
 
         # 返回用户信息
         return CommonResponse(
-            code=200, 
+            code=200,
             msg="Login successful",
             data={"user": user}
         )
@@ -123,4 +124,198 @@ async def get_user(id: str):
     user = await User.get(user_id)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-    return user
+    return CommonResponse(
+        code=200,
+        msg="success",
+        data={"user": user}
+    )
+
+
+# 修改密码接口
+@router.post("/auth/password", response_description="修改密码")
+async def change_password(change_pwd: dict):
+    try:
+        username = change_pwd.get("username")
+        email = change_pwd.get("email")
+        new_password = change_pwd.get("new_password")
+        # 查找用户
+        user = await User.find_one({"username": username, "email": email})
+        if not user:
+            raise HTTPException(status_code=400, detail="User not found with provided username and email")
+
+        # 验证密码
+        if not verify_password(change_pwd.get("old_password"), user.passwordHash):
+            raise HTTPException(status_code=401, detail="Invalid old password")
+
+        # 更新密码
+        user.passwordHash = hash_password(new_password)
+        await user.save()
+        return CommonResponse(
+            code=200,
+            msg="update password successful",
+            data={"user": user}
+        )
+    except Exception as e:
+        logger.error(f"Error in change_password: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# 更新用户信息接口
+@router.put("/profile", response_description="更新用户信息")
+async def update_profile(profile: dict):
+    # profile{"username": "str", "new_username": "str", "new_email": "EmailStr", "new_bio": "str", "new_settings": dict}
+    try:
+        username = profile.get("username")
+        new_username = profile.get("new_username")
+        new_email = profile.get("new_email")
+        new_bio = profile.get("new_bio")
+        new_settings = profile.get("new_settings")
+        # 查找用户
+        current_user = await User.find_one({"username": username})
+        if not current_user:
+            raise HTTPException(status_code=400, detail="User not found with provided username")
+
+        # 定义一个字典用于存储需要更新的字段
+        update_fields = {}
+
+        if username is not None:  # 使用is not None检查，允许username为空字符串
+            update_fields['username'] = new_username
+        if new_email is not None:  # 使用is not None检查
+            update_fields['email'] = new_email
+        if new_bio is not None:  # 使用is not None检查
+            update_fields['bio'] = new_bio
+        if new_settings is not None:  # 使用is not None检查
+            # 添加对Settings模型的验证
+            update_fields['settings'] = new_settings
+
+        # 逐个更新字段，确保只更新提供的字段
+        for key, value in update_fields.items():
+            setattr(current_user, key, value)
+
+        await current_user.save()
+        return CommonResponse(
+            code=200,
+            msg="update profile successful",
+            data={"user": current_user}
+        )
+    except Exception as e:
+        logger.error(f"Error in update_profile: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# 关注用户接口
+@router.post("/follow", response_description="关注用户")
+async def follow_user(follow_id: str, current_id: str):
+    # userId: str
+    try:
+        follow_id = PydanticObjectId(follow_id)
+        current_id = PydanticObjectId(current_id)
+        # 查找当前用户
+        current_user = await User.get(current_id)
+        if not current_user:
+            raise HTTPException(status_code=401, detail="Unauthorized")
+        # 查找被关注的用户
+        target_user = await User.get(follow_id)
+        if not target_user:
+            raise HTTPException(status_code=404, detail="User not found")
+        # 关注用户
+        if follow_id in current_user.following:
+            raise HTTPException(status_code=400, detail="User already followed")
+        current_user.following.append(follow_id)
+        await current_user.save()
+        # 反向关注
+        target_user.followers.append(current_id)
+        await target_user.save()
+        return CommonResponse(
+            code=200,
+            msg="follow user successful",
+            data=None
+        )
+    except Exception as e:
+        logger.error(f"Error in follow_user: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# 取消关注用户接口
+@router.delete("/unfollow", response_description="取消关注用户")
+async def unfollow_user(unfollow_id: str, current_id: str):
+    # userId: str
+    try:
+        user_id = PydanticObjectId(unfollow_id)
+        current_id = PydanticObjectId(current_id)
+        # 查找当前用户
+        current_user = await User.get(current_id)
+        if not current_user:
+            raise HTTPException(status_code=401, detail="Unauthorized")
+        # 查找被取消关注的用户
+        target_user = await User.get(user_id)
+        if not target_user:
+            raise HTTPException(status_code=404, detail="User not found")
+        # 取消关注用户
+        if user_id not in current_user.following:
+            raise HTTPException(status_code=400, detail="User not followed")
+        current_user.following.remove(user_id)
+        await current_user.save()
+        # 反向取消关注
+        target_user.followers.remove(current_id)
+        await target_user.save()
+        return CommonResponse(
+            code=200,
+            msg="unfollow user successful",
+            data=None
+        )
+    except Exception as e:
+        logger.error(f"Error in unfollow_user: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# 获取用户关注列表接口
+@router.get("/following/{userId}", response_description="获取用户关注列表")
+async def get_following_list(userId: str):
+    # userId: str
+    try:
+        user_id = PydanticObjectId(userId)
+        # 查找用户
+        user = await User.get(user_id)
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        # 获取关注列表
+        following_list = []
+        for following_id in user.following:
+            following_user = await User.get(following_id)
+            if following_user:
+                following_list.append(following_user)
+        return CommonResponse(
+            code=200,
+            msg="get following list successful",
+            data={"following_list": following_list}
+        )
+    except Exception as e:
+        logger.error(f"Error in get_following_list: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# 获取用户粉丝列表接口
+@router.get("/follower/{userId}", response_description="获取用户粉丝列表")
+async def get_follower_list(userId: str):
+    # userId: str
+    try:
+        user_id = PydanticObjectId(userId)
+        # 查找用户
+        user = await User.get(user_id)
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        # 获取粉丝列表
+        follower_list = []
+        for follower_id in user.followers:
+            follower_user = await User.get(follower_id)
+            if follower_user:
+                follower_list.append(follower_user)
+        return CommonResponse(
+            code=200,
+            msg="get follower list successful",
+            data={"follower_list": follower_list}
+        )
+    except Exception as e:
+        logger.error(f"Error in get_follower_list: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))

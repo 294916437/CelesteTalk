@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import List, Optional
+from typing import List
 from pydantic import Field, model_validator
 from beanie import Document, PydanticObjectId
 from utils.time import format_datetime_now
@@ -10,14 +10,14 @@ class Comment(Document):
     authorId: PydanticObjectId = Field(..., description="评论作者ID")
     content: str = Field(..., description="评论内容")
     
-    # 可选字段
+    # 非必填字段，但需要有效的ObjectId
+    replyTo: PydanticObjectId = Field(
+        default_factory=PydanticObjectId, 
+        description="回复的评论ID"
+    )
     likes: List[PydanticObjectId] = Field(
         default_factory=list,
         description="点赞用户ID列表"
-    )
-    replyTo: Optional[PydanticObjectId] = Field(
-        default=None,
-        description="回复的评论ID"
     )
     
     # 时间字段
@@ -36,10 +36,14 @@ class Comment(Document):
         if not isinstance(data, dict):
             return data
         
-        # 设置默认值
+        # 确保replyTo始终是有效的ObjectId
+        if 'replyTo' not in data or data['replyTo'] is None:
+            data['replyTo'] = str(PydanticObjectId())  # 生成新的ObjectId
+            
+        # 其他默认值设置
         data.setdefault('likes', [])
         
-        # 设置时间戳
+        # 时间戳
         now = format_datetime_now()
         data.setdefault('createdAt', now)
         data.setdefault('updatedAt', now)
@@ -56,8 +60,8 @@ class Comment(Document):
                 "postId": "507f1f77bcf86cd799439011",
                 "authorId": "507f1f77bcf86cd799439012",
                 "content": "这是一条测试评论",
-                "likes": [],
-                "replyTo": None
+                "replyTo": "507f1f77bcf86cd799439013",  
+                "likes": []
             }
         }
     }

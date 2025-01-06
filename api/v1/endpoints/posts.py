@@ -3,9 +3,10 @@ from typing import List
 from beanie import PydanticObjectId
 from fastapi import APIRouter, HTTPException
 from models.Post import Post
+from models.Comment import Comment
 import logging
 from pydantic import ValidationError
-
+from middleware.response import CommonResponse
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
@@ -86,3 +87,34 @@ async def delete_post(id: str):
         return {"message": "Post deleted successfully"}
     except Exception:
         raise HTTPException(status_code=400, detail="Invalid post ID format")
+@router.get("/post/{post_id}", response_description="获取帖子的所有评论")
+async def get_post_comments(post_id: str) -> List[Comment]:
+    try:
+        post_id = PydanticObjectId(post_id)
+        comments = await Comment.find(
+            Comment.postId == post_id
+        ).sort(+Comment.createdAt).to_list()
+        return comments
+    except Exception as e:
+        logger.error(f"Error getting comments for post {post_id}: {str(e)}")
+        raise HTTPException(status_code=400, detail="Invalid post ID format")
+    
+    
+@router.post("/{post_id}/comment", response_description="创建帖子的新评论")
+async def create_comment(data: dict):
+    post_id = data.get("post_id")
+    content = data.get("content")
+    author_id=data.get("author_id")
+    try:
+        post_id = PydanticObjectId(post_id)
+        author_id=PydanticObjectId(author_id)
+        new_comment = Comment(
+            postId=post_id,
+            authorId=author_id,
+            content=content
+        )
+        await new_comment.insert()
+        return CommonResponse(code=200, msg="success", data={"comment": new_comment})
+    except Exception as e:
+        logger.error(f"Error creating comment: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))

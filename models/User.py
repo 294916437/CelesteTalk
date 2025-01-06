@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import List, Optional, Any
+from typing import List,  Any
 from pydantic import BaseModel, Field, model_validator, EmailStr
 from beanie import Document, PydanticObjectId
 from utils.time import format_datetime_now
