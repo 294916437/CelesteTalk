@@ -1,16 +1,26 @@
 from datetime import datetime, timezone
-from typing import List, Optional, Any
+from typing import List, Optional, Any, Literal
 from pydantic import BaseModel, Field, model_validator
 from beanie import Document, PydanticObjectId
+import pytz
+from utils.common import format_datetime
+
+# 获取东八区时区
+CST = pytz.timezone('Asia/Shanghai')
 
 class Media(BaseModel):
-    type: str
+    type: Literal["image", "video"]
     url: str
 
     @classmethod
     def from_dict(cls, data: dict) -> "Media":
         if isinstance(data, str):
+            # 默认字符串视为图片链接
             return cls(type="image", url=data)
+        
+        # 验证媒体类型
+        if data.get('type') not in ['image', 'video']:
+            raise ValueError("Media type must be either 'image' or 'video']")
         return cls(**data)
 
 class Post(Document):
@@ -22,8 +32,8 @@ class Post(Document):
     replyTo: Optional[PydanticObjectId] = None
     isRepost: bool = Field(default=False)
     originalPost: Optional[PydanticObjectId] = None
-    createdAt: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    updatedAt: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    createdAt: datetime = Field(default_factory=lambda: format_datetime(datetime.now(CST)))
+    updatedAt: datetime = Field(default_factory=lambda: format_datetime(datetime.now(CST)))
 
     @model_validator(mode='before')
     @classmethod
@@ -40,8 +50,8 @@ class Post(Document):
             data.setdefault('repostCount', 0)
             data.setdefault('isRepost', False)
             
-            # 处理时间戳
-            now = datetime.now(timezone.utc)
+            # 处理时间戳，使用东八区
+            now = format_datetime(datetime.now(CST))
             if 'createdAt' not in data:
                 data['createdAt'] = now
             if 'updatedAt' not in data:

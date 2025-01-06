@@ -1,8 +1,12 @@
 from datetime import datetime
+import pytz
 from typing import List, Optional, Any
 from pydantic import BaseModel, EmailStr, Field, model_validator
 from beanie import Document, PydanticObjectId
+from utils.common import format_datetime
 
+# 获取东八区时区
+CST = pytz.timezone('Asia/Shanghai')
 
 class Avatar(BaseModel):
     url: str
@@ -50,8 +54,8 @@ class User(Document):
     likesCount: int = Field(default=0)
     status: Status = Field(default_factory=Status)
     settings: Settings = Field(default_factory=Settings)
-    createdAt: datetime = Field(default_factory=datetime.utcnow)
-    updatedAt: datetime = Field(default_factory=datetime.utcnow)
+    createdAt: datetime = Field(default_factory=lambda: format_datetime(datetime.now(CST)))
+    updatedAt: datetime = Field(default_factory=lambda: format_datetime(datetime.now(CST)))
 
     @model_validator(mode='before')
     @classmethod
@@ -73,13 +77,15 @@ class User(Document):
             data.setdefault('postsCount', 0)
             data.setdefault('likesCount', 0)
 
-            # 处理时间戳
+            # 处理时间戳，使用东八区
+            now = format_datetime(datetime.now(CST))
             if 'createdAt' not in data:
-                data['createdAt'] = datetime.utcnow()
+                data['createdAt'] = now
             if 'updatedAt' not in data:
-                data['updatedAt'] = datetime.utcnow()
+                data['updatedAt'] = now
 
         return data
 
     class Settings:
         name = "users"
+

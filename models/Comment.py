@@ -1,7 +1,12 @@
-from datetime import datetime, timezone
+from datetime import datetime
+import pytz
 from typing import List, Optional, Any
-from pydantic import BaseModel, Field, model_validator
+from pydantic import  Field, model_validator
 from beanie import Document, PydanticObjectId
+from utils.common import format_datetime
+
+# 获取东八区时区
+CST = pytz.timezone('Asia/Shanghai')
 
 class Comment(Document):
     postId: PydanticObjectId
@@ -9,8 +14,8 @@ class Comment(Document):
     content: str
     likes: List[PydanticObjectId] = Field(default_factory=list)
     replyTo: Optional[PydanticObjectId] = None
-    createdAt: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    updatedAt: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    createdAt: datetime = Field(default_factory=lambda: format_datetime(datetime.now(CST)))
+    updatedAt: datetime = Field(default_factory=lambda: format_datetime(datetime.now(CST)))
 
     @model_validator(mode='before')
     @classmethod
@@ -19,8 +24,8 @@ class Comment(Document):
             # 确保likes字段存在
             data.setdefault('likes', [])
             
-            # 处理时间戳
-            now = datetime.now(timezone.utc)
+            # 处理时间戳，使用东八区
+            now = format_datetime(datetime.now(CST))
             if 'createdAt' not in data:
                 data['createdAt'] = now
             if 'updatedAt' not in data:
