@@ -138,22 +138,3 @@ export class HttpClient {
     });
   }
 }
-
-// 使用示例:
-// 上传单个文件
-// const response = await HttpClient.upload<ResponseType>('/upload', file);
-
-// 上传多个文件
-// const response = await HttpClient.upload<ResponseType>('/upload', [file1, file2]);
-
-// 下载文件
-// await HttpClient.download('/download/123', 'myfile.pdf');
-
-// 获取图片
-// const imageBlob = await HttpClient.get<Blob>('/image/123', { responseType: 'blob' });
-
-// 发送 JSON 数据
-// const response = await HttpClient.post<ResponseType>('/api', {
-//   data: { name: 'John' },
-//   contentType: ContentType.JSON
-// });

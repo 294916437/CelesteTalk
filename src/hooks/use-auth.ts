@@ -15,20 +15,17 @@ export function useAuth() {
       return response.data;
     },
     onSuccess: (data) => {
-      localStorage.setItem("token", data.token);
       localStorage.setItem("user", JSON.stringify(data.user));
       toast.success(`欢迎回来, ${data.user.username}!`);
       router.push("/dashboard");
     },
     onError: (error: Error) => {
       toast.error(`登录失败: ${error.message}`);
-      localStorage.removeItem("token");
       localStorage.removeItem("user");
     },
   });
 
   const logout = () => {
-    localStorage.removeItem("token");
     localStorage.removeItem("user");
     router.push("/login");
     toast.info("您已安全退出登录");

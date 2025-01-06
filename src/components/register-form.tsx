@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Link from "next/link";
 import { AnimatedWrapper } from "./animated-wrapper";
+import { log } from "console";
 
 type RegisterFormValues = z.infer<typeof registerSchema>;
 
@@ -39,7 +40,7 @@ export function RegisterForm({ className, ...props }: React.ComponentProps<"div"
       form.setFocus("email");
       return;
     }
-
+    console.log(email);
     await sendCode(email);
   };
   const onSubmit = (data: RegisterFormValues) => {

@@ -13,12 +13,26 @@ import { Textarea } from "@/components/ui/textarea"
 import { Separator } from "@/components/ui/separator"
 import { VisuallyHidden } from "@/components/ui/visually-hidden"
 import { Post } from "./post-list"
+import { Reply } from "./post-details"
+
+function formatTime(timestamp: string): string {
+    const date = new Date(timestamp)
+    return new Intl.DateTimeFormat('zh-CN', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+    }).format(date)
+}
 
 interface ReplyDialogProps {
     open: boolean
     onOpenChange: (open: boolean) => void
     post: Post
-    onReply: (content: string) => void
+    replyTo: Reply | null
+    onReply: (content: string, replyToId: string | null) => void
     currentUser?: {
         name: string
         handle: string
@@ -30,6 +44,7 @@ export function ReplyDialog({
     open,
     onOpenChange,
     post,
+    replyTo,
     onReply,
     currentUser = {
         name: "当前用户",
@@ -45,7 +60,7 @@ export function ReplyDialog({
 
     const handleReply = () => {
         if (content.trim() && !isOverLimit) {
-            onReply(content)
+            onReply(content, replyTo ? replyTo.id : null)
             setContent("")
             onOpenChange(false)
         }
@@ -57,7 +72,7 @@ export function ReplyDialog({
                 <DialogHeader className="text-xl font-semibold border-b pb-3">
                     <DialogTitle asChild>
                         <VisuallyHidden>
-                            回复给 {post.author.name} ({post.author.handle})
+                            回复给 {replyTo ? replyTo.author.name : post.author.name} ({replyTo ? replyTo.author.handle : post.author.handle})
                         </VisuallyHidden>
                     </DialogTitle>
                     回复
@@ -66,21 +81,21 @@ export function ReplyDialog({
                     <div className="flex gap-4">
                         <div className="flex flex-col items-center gap-2">
                             <Avatar className="h-10 w-10">
-                                <AvatarImage src={post.author.avatar} />
-                                <AvatarFallback>{post.author.name[0]}</AvatarFallback>
+                                <AvatarImage src={replyTo ? replyTo.author.avatar : post.author.avatar} />
+                                <AvatarFallback>{replyTo ? replyTo.author.name[0] : post.author.name[0]}</AvatarFallback>
                             </Avatar>
                             <div className="w-0.5 flex-1 bg-border" />
                         </div>
                         <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
-                                <span className="font-semibold">{post.author.name}</span>
-                                <span className="text-muted-foreground">{post.author.handle}</span>
+                                <span className="font-semibold">{replyTo ? replyTo.author.name : post.author.name}</span>
+                                <span className="text-muted-foreground">{replyTo ? replyTo.author.handle : post.author.handle}</span>
                                 <span className="text-muted-foreground">·</span>
-                                <span className="text-muted-foreground">{post.timestamp}</span>
+                                <span className="text-muted-foreground">{formatTime(replyTo ? replyTo.timestamp : post.timestamp)}</span>
                             </div>
-                            <p className="mt-1 text-sm">{post.content}</p>
+                            <p className="mt-1 text-sm">{replyTo ? replyTo.content : post.content}</p>
                             <p className="mt-4 text-muted-foreground text-sm">
-                                回复给 <span className="text-primary">{post.author.handle}</span>
+                                回复给 <span className="text-primary">{replyTo ? replyTo.author.handle : post.author.handle}</span>
                             </p>
                         </div>
                     </div>

@@ -1,8 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { Post } from "@/components/post-list";
 import { PostDialog } from "@/components/post-dialog";
-import { PostList, Post } from "@/components/post-list";
+import { PostList } from "@/components/post-list";
+import { PostDetails } from "@/components/post-details";
 import { SidebarLeft } from "@/components/sidebar-left";
 import { SidebarRight } from "@/components/sidebar-right";
 import {
@@ -14,6 +16,12 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 
+const getRelativeTimestamp = (hoursAgo: number) => {
+  const date = new Date();
+  date.setHours(date.getHours() - hoursAgo);
+  return date.toISOString();
+};
+
 const initialPosts: Post[] = [
   {
     id: "1",
@@ -24,11 +32,12 @@ const initialPosts: Post[] = [
     },
     content:
       "Just launched my new project! 🚀 Really excited to share this with everyone. What do you think?",
-    timestamp: "2h",
+    timestamp: getRelativeTimestamp(2), // 2 hours ago
     stats: {
       likes: 42,
       comments: 12,
       shares: 5,
+      views: 150,
     },
   },
   {
@@ -40,12 +49,18 @@ const initialPosts: Post[] = [
     },
     content:
       "Had an amazing time at the tech conference today! Met so many brilliant minds. #TechConf2024",
-    timestamp: "5h",
-    media: [{ type: "image", url: "/form-side.jpg" }],
+    timestamp: getRelativeTimestamp(5),
+    media: [
+      {
+        type: "image" as const,
+        url: "/preview.jpg?height=512&width=1024",
+      },
+    ],
     stats: {
       likes: 128,
       comments: 24,
       shares: 16,
+      views: 320,
     },
   },
   {
@@ -56,10 +71,10 @@ const initialPosts: Post[] = [
       avatar: "/placeholder.svg",
     },
     content: "Check out this cool video with subtitles!",
-    timestamp: "1h",
+    timestamp: getRelativeTimestamp(1), // 1 hour ago
     media: [
       {
-        type: "video",
+        type: "video" as const,
         url: "/video.mp4",
         subtitles: [
           { src: "/subtitles/en.vtt", label: "English", srcLang: "en" },
@@ -71,35 +86,30 @@ const initialPosts: Post[] = [
       likes: 15,
       comments: 3,
       shares: 2,
+      views: 75,
     },
   },
 ];
 
 export default function Page() {
-  const [posts, setPosts] = useState<Post[]>(initialPosts);
+  const [selectedPost, setSelectedPost] = useState<Post | null>(null);
+  const [isClient, setIsClient] = useState(false);
 
-  const handleNewPost = (newPost: {
-    content: string;
-    media: { type: "image" | "video"; url: string }[];
-  }) => {
-    const post: Post = {
-      id: (posts.length + 1).toString(),
-      author: {
-        name: "Current User",
-        handle: "@currentuser",
-        avatar: "/placeholder-avatar.jpg",
-      },
-      content: newPost.content,
-      timestamp: "刚刚",
-      media: newPost.media,
-      stats: {
-        likes: 0,
-        comments: 0,
-        shares: 0,
-      },
-    };
-    setPosts([post, ...posts]);
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  const handlePostClick = (post: Post) => {
+    setSelectedPost(post);
   };
+
+  const handleBackToList = () => {
+    setSelectedPost(null);
+  };
+
+  if (!isClient) {
+    return null; // or a loading spinner
+  }
 
   return (
     <SidebarProvider>
@@ -112,19 +122,27 @@ export default function Page() {
             <Breadcrumb>
               <BreadcrumbList>
                 <BreadcrumbItem>
-                  <BreadcrumbPage className='line-clamp-1'>首页</BreadcrumbPage>
+                  <BreadcrumbPage className='line-clamp-1'>
+                    {selectedPost ? "帖子" : "首页"}
+                  </BreadcrumbPage>
                 </BreadcrumbItem>
               </BreadcrumbList>
             </Breadcrumb>
           </div>
         </header>
         <div className='flex flex-1 flex-col gap-4 p-4'>
-          <div className='mx-auto w-full max-w-3xl rounded-xl bg-card p-4'>
-            <PostDialog onPost={handleNewPost} />
-          </div>
-          <div className='mx-auto w-full max-w-3xl rounded-xl bg-background'>
-            <PostList posts={posts} />
-          </div>
+          {selectedPost ? (
+            <PostDetails post={selectedPost} onBack={handleBackToList} />
+          ) : (
+            <>
+              <div className='mx-auto w-full max-w-3xl rounded-xl bg-card p-4'>
+                <PostDialog />
+              </div>
+              <div className='mx-auto w-full max-w-3xl rounded-xl bg-background'>
+                <PostList initialPosts={initialPosts} onPostClick={handlePostClick} />
+              </div>
+            </>
+          )}
         </div>
       </SidebarInset>
       <SidebarRight />
