@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from .endpoints import users, posts, comments,email
+from .endpoints import users, posts, comments, emails
 
 router = APIRouter()
 
@@ -22,7 +22,7 @@ router.include_router(
 )
 
 router.include_router(
-    email.router,
-    prefix="/email",
+    emails.router,
+    prefix="/emails",
     tags=["email"]
 )
