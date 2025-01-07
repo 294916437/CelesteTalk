@@ -4,6 +4,7 @@ from pydantic import BaseModel, Field, model_validator
 from beanie import Document, PydanticObjectId
 from utils.time import format_datetime_now
 
+
 class Media(BaseModel):
     type: str = Field(
         ...,  # 必填
@@ -12,13 +13,14 @@ class Media(BaseModel):
     )
     url: str = Field(..., description="媒体URL")
 
+
 class Post(Document):
     # MongoDB要求的必填字段
     authorId: PydanticObjectId = Field(..., description="作者ID")
     content: str = Field(..., description="帖子内容")
-    createdAt: datetime = Field(..., description="创建时间")  
+    createdAt: datetime = Field(..., description="创建时间")
     isRepost: bool = Field(..., description="是否是转发")
-    
+
     # 可选字段，但必须符合类型要求
     media: List[Media] = Field(default_factory=list, description="媒体列表")
     likes: List[PydanticObjectId] = Field(default_factory=list, description="点赞用户ID列表")
@@ -32,14 +34,14 @@ class Post(Document):
     def validate_data(cls, data: dict) -> dict:
         if not isinstance(data, dict):
             return data
-            
+
         # 设置必填字段的默认值
         now = format_datetime_now()
         if 'createdAt' not in data:
             data['createdAt'] = now
         if 'isRepost' not in data:
             data['isRepost'] = False
-            
+
         # 设置其他字段的默认值
         data.setdefault('media', [])
         data.setdefault('likes', [])

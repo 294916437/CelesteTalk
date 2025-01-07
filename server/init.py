@@ -6,6 +6,9 @@ from models.Post import Post
 from models.Comment import Comment
 from models.Mail import Mail
 import logging
+import dns.resolver
+dns.resolver.default_resolver=dns.resolver.Resolver(configure=False)
+dns.resolver.default_resolver.nameservers=['8.8.8.8']
 
 # 设置日志
 logging.basicConfig(level=logging.DEBUG)
