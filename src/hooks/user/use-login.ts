@@ -1,9 +1,9 @@
 import { useMutation } from "@tanstack/react-query";
-import { AuthService } from "@/services/auth.service";
+import { AuthService } from "@/services/user.service";
 import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
 
-export function useAuth() {
+export function uselogin() {
   const router = useRouter();
 
   const loginMutation = useMutation({

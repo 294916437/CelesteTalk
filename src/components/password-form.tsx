@@ -11,7 +11,7 @@ import { AnimatedWrapper } from "./animated-wrapper";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { resetPasswordSchema } from "@/utils/validations/auth";
-import { usePassword } from "@/hooks/use-password";
+import { usePassword } from "@/hooks/user/use-password";
 import type { z } from "zod";
 
 type ResetPasswordFormValues = z.infer<typeof resetPasswordSchema>;

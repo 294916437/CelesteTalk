@@ -11,13 +11,13 @@ import { AnimatedWrapper } from "./animated-wrapper";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { loginSchema } from "@/utils/validations/auth";
-import { useAuth } from "@/hooks/use-auth";
+import { uselogin } from "@/hooks/user/use-login";
 import type { z } from "zod";
 
 type LoginFormValues = z.infer<typeof loginSchema>;
 
 export function LoginForm({ className, ...props }: React.ComponentProps<"div">) {
-  const { login, isLoggingIn } = useAuth();
+  const { login, isLoggingIn } = uselogin();
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: {

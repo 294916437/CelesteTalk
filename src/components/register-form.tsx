@@ -4,7 +4,7 @@ import React from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { registerSchema } from "@/utils/validations/auth";
-import { useRegister } from "@/hooks/use-register";
+import { useRegister } from "@/hooks/user/use-register";
 import type { z } from "zod";
 import { cn } from "@/utils/utils";
 import { Button } from "@/components/ui/button";
@@ -13,7 +13,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Link from "next/link";
 import { AnimatedWrapper } from "./animated-wrapper";
-import { log } from "console";
 
 type RegisterFormValues = z.infer<typeof registerSchema>;
 

@@ -12,11 +12,21 @@ interface RequestConfig extends RequestInit {
   contentType?: ContentType;
 }
 
+// 添加调试日志
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL;
+const API_PREFIX = "/api/v1";
+console.log("API Base URL:", BASE_URL); // 添加这行来验证环境变量是否正确加载
 
 export class HttpClient {
   private static async request<T>(endpoint: string, config: RequestConfig): Promise<T> {
-    const url = new URL(endpoint, BASE_URL);
+    // 确保endpoint以/开头
+    const normalizedEndpoint = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
+    // 先拼接API前缀和endpoint
+    const fullPath = `${API_PREFIX}${normalizedEndpoint}`;
+    // 然后创建完整的URL
+    const url = new URL(fullPath, BASE_URL);
+
+    console.log("Request URL:", url.toString()); // 现在应该显示正确的URL
 
     if (config.params) {
       Object.entries(config.params).forEach(([key, value]) => {

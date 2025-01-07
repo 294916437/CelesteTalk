@@ -1,14 +1,14 @@
 import { useState } from "react";
-import { AuthService } from "@/services/auth.service";
-import { toast } from "react-toastify";
+import { AuthService } from "@/services/user.service";
+import { RegisterData, AuthError } from "@/types/auth";
 import { useRouter } from "next/navigation";
-import type { ResetPasswordData } from "@/types/auth";
+import { toast } from "react-toastify";
 
-export function usePassword() {
-  const router = useRouter();
+export function useRegister() {
+  const [isRegistering, setIsRegistering] = useState(false);
   const [loading, setLoading] = useState(false);
   const [countdown, setCountdown] = useState(0);
-
+  const router = useRouter();
   const startCountdown = () => {
     setCountdown(60);
     const timer = setInterval(() => {
@@ -21,7 +21,6 @@ export function usePassword() {
       });
     }, 1000);
   };
-
   const handleSendCode = async (email: string) => {
     if (!email) {
       toast.error("请输入邮箱地址");
@@ -38,17 +37,23 @@ export function usePassword() {
       setLoading(false);
     }
   };
-
-  const handleSubmit = async (data: ResetPasswordData) => {
+  const register = async (data: RegisterData) => {
+    setIsRegistering(true);
     try {
-      setLoading(true);
-      await AuthService.password(data);
-      toast.success("密码重置成功");
-      router.push("/login");
+      const response = await AuthService.register(data);
+
+      if (response.code === 200) {
+        toast.success("注册成功！");
+        // 注册成功后跳转到登录页
+        router.push("/login");
+      } else {
+        toast.error(response.message || "注册失败，请重试");
+      }
     } catch (error) {
-      toast.error("密码重置失败");
+      const err = error as AuthError;
+      toast.error(err.message || "注册过程中出现错误");
     } finally {
-      setLoading(false);
+      setIsRegistering(false);
     }
   };
 
@@ -56,6 +61,7 @@ export function usePassword() {
     loading,
     countdown,
     handleSendCode,
-    handleSubmit,
+    register,
+    isRegistering,
   };
 }
