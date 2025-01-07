@@ -4,6 +4,7 @@ from beanie import PydanticObjectId
 from fastapi import APIRouter, HTTPException, Body
 from models.Post import Post
 from models.Comment import Comment
+from models.User import User
 from utils.time import format_datetime_now
 import logging
 from pydantic import ValidationError, BaseModel
@@ -151,12 +152,21 @@ async def get_post_comments(post_id: str) -> List[Comment]:
     
     
 @router.post("/{post_id}/comment", response_description="创建帖子的新评论")
-async def create_comment(post_id:str,data: dict):
+async def create_comment(data: dict):
+    # data = {"post_id": "str", "content": "str", "author_id": "str"}
+    post_id = data.get("post_id")
     content = data.get("content")
-    author_id=data.get("author_id")
+    author_id = data.get("author_id")
     try:
         post_id = PydanticObjectId(post_id)
         author_id = PydanticObjectId(author_id)
+        postcollection = Post.get_motor_collection()
+        authorcollection = User.get_motor_collection()
+        post_doc = await postcollection.find_one({"_id": post_id})
+        author_doc = await authorcollection.find_one({"_id": author_id})
+        if not post_doc or not author_doc or not content:
+            raise HTTPException(status_code=400, detail="Invalid data")
+
         new_comment = Comment(
             postId=post_id,
             authorId=author_id,

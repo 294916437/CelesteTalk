@@ -32,6 +32,11 @@ sniffio==1.3.1
 starlette==0.37.2
 typing_extensions==4.11.0
 uvicorn==0.29.0
+pymongo==4.6.3
+pytz==2024.1
+jinja2==3.1.5
+fastapi_mail==1.4.2
+
 ```
 
 ### about env
