@@ -6,7 +6,7 @@ from pydantic import ValidationError
 from utils.common import hash_password, verify_password
 from utils.time import format_datetime_now
 from middleware.response import CommonResponse
-
+from models.Email import verify_code
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
@@ -61,7 +61,13 @@ async def register_user(user_data: dict):
         existing_email = await User.find_one({"email": user_data["email"]})
         if existing_email:
             raise HTTPException(status_code=400, detail="Email already exists")
-        # TODO：检查邮箱验证码是否正确
+
+        # 验证注册验证码
+        verify_result = await verify_code(user_data["email"], user_data["code"] , "register")
+        if not verify_result:
+            raise HTTPException(status_code=400, detail="Invalid verification code")
+
+
         # 创建新用户实例
         new_user = User(
             username=user_data["username"],
@@ -71,7 +77,7 @@ async def register_user(user_data: dict):
 
         # 保存到数据库
         await new_user.insert()
-        return CommonResponse(code=200, msg="success", data={"user": new_user})
+        return CommonResponse(code=200, msg="success", data=None)
     except Exception as e:
         logger.error(f"Error in register_user: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -104,7 +110,7 @@ async def login(credentials: dict):
         # 返回用户信息
         return CommonResponse(
             code=200,
-            msg="Login successful",
+            msg="Login successfully",
             data={"user": user}
         )
 
@@ -132,19 +138,23 @@ async def get_user(id: str):
 
 
 # 修改密码接口
-@router.post("/auth/password", response_description="修改密码")
-async def change_password(change_pwd: dict):
+@router.post("/password", response_description="修改密码")
+async def change_password(data: dict):
     try:
-        username = change_pwd.get("username")
-        email = change_pwd.get("email")
-        new_password = change_pwd.get("new_password")
+        email = data.get("email")
+        new_password = data.get("password")
         # 查找用户
-        user = await User.find_one({"username": username, "email": email})
+        user = await User.find_one({"email": email})
         if not user:
             raise HTTPException(status_code=400, detail="User not found with provided username and email")
 
+        # 验证重置密码验证码
+        verify_result = await verify_code(email, data["code"], "reset-password")
+        if not verify_result:
+            raise HTTPException(status_code=400, detail="Invalid verification code")
+
         # 验证密码
-        if not verify_password(change_pwd.get("old_password"), user.passwordHash):
+        if not verify_password(new_password, user.passwordHash):
             raise HTTPException(status_code=401, detail="Invalid old password")
 
         # 更新密码
@@ -152,8 +162,8 @@ async def change_password(change_pwd: dict):
         await user.save()
         return CommonResponse(
             code=200,
-            msg="update password successful",
-            data={"user": user}
+            msg="update password successfully",
+            data={"user": None}
         )
     except Exception as e:
         logger.error(f"Error in change_password: {str(e)}")
@@ -195,7 +205,7 @@ async def update_profile(profile: dict):
         await current_user.save()
         return CommonResponse(
             code=200,
-            msg="update profile successful",
+            msg="update profile successfully",
             data={"user": current_user}
         )
     except Exception as e:
@@ -228,7 +238,7 @@ async def follow_user(follow_id: str, current_id: str):
         await target_user.save()
         return CommonResponse(
             code=200,
-            msg="follow user successful",
+            msg="follow user successfully",
             data=None
         )
     except Exception as e:
@@ -261,7 +271,7 @@ async def unfollow_user(unfollow_id: str, current_id: str):
         await target_user.save()
         return CommonResponse(
             code=200,
-            msg="unfollow user successful",
+            msg="unfollow user successfully",
             data=None
         )
     except Exception as e:
@@ -287,7 +297,7 @@ async def get_following_list(userId: str):
                 following_list.append(following_user)
         return CommonResponse(
             code=200,
-            msg="get following list successful",
+            msg="get following list successfully",
             data={"following_list": following_list}
         )
     except Exception as e:
@@ -313,7 +323,7 @@ async def get_follower_list(userId: str):
                 follower_list.append(follower_user)
         return CommonResponse(
             code=200,
-            msg="get follower list successful",
+            msg="get follower list successfully",
             data={"follower_list": follower_list}
         )
     except Exception as e:

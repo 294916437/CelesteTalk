@@ -4,6 +4,7 @@ from pydantic_settings import BaseSettings
 from models.User import User
 from models.Post import Post
 from models.Comment import Comment
+from models.Mail import Mail
 import logging
 
 # 设置日志
@@ -48,7 +49,7 @@ async def initiate_database():
 
         await init_beanie(
             database=client[settings.DATABASE_NAME],
-            document_models=[User, Post, Comment]
+            document_models=[User, Post, Comment,Mail]
         )
         logger.info("Beanie initialization completed")
     except Exception as e:

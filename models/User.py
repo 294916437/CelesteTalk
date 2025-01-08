@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import List,  Any
-from pydantic import BaseModel, Field, model_validator, EmailStr
+from pydantic import BaseModel, Field, model_validator
 from beanie import Document, PydanticObjectId
 from utils.time import format_datetime_now
 
@@ -47,6 +47,7 @@ class Settings(BaseModel):
     }
 
 class User(Document):
+    # 必填字段
     username: str = Field(..., description="用户名")
     email: str = Field(
         ..., 
@@ -57,7 +58,7 @@ class User(Document):
     status: Status = Field(..., description="用户状态")
     settings: Settings = Field(..., description="用户设置")
     
-    # 必填字段，但有默认值
+    # 非必填字段，但有默认值
     avatar: str = Field(default="", description="用户头像URL")
     bio: str = Field(default="", description="用户简介")
     following: List[PydanticObjectId] = Field(default_factory=list)

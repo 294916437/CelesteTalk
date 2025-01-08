@@ -3,6 +3,7 @@ from typing import List
 from beanie import PydanticObjectId
 from fastapi import APIRouter, HTTPException, Body
 from models.Comment import Comment
+from models.User import User
 from middleware.response import CommonResponse
 import logging
 

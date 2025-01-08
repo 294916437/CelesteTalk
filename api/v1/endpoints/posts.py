@@ -153,7 +153,6 @@ async def get_post_comments(post_id: str) -> List[Comment]:
     
 @router.post("/{post_id}/comment", response_description="创建帖子的新评论")
 async def create_comment(data: dict):
-    # data = {"post_id": "str", "content": "str", "author_id": "str"}
     post_id = data.get("post_id")
     content = data.get("content")
     author_id = data.get("author_id")
