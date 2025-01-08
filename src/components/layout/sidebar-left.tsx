@@ -13,8 +13,8 @@ import {
   MoreHorizontal,
   BadgeCheck,
 } from "lucide-react";
-import { NavMain, NavItem } from "@/components/nav-main";
-import { Sidebar, SidebarHeader } from "@/components/ui/sidebar";
+import { NavMain, NavItem } from "@/components/navigation/nav-main";
+import { Sidebar, SidebarHeader } from "@/components/layout/sidebar";
 
 const navItems: NavItem[] = [
   { title: "首页", url: "/", icon: Home, isActive: true },

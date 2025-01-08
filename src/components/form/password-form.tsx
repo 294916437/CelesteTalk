@@ -2,10 +2,10 @@
 
 import React, { useState } from "react";
 import { cn } from "@/utils/utils";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Button } from "@/components/basic/button";
+import { Card, CardContent } from "@/components/data/card";
+import { Input } from "@/components/basic/input";
+import { Label } from "@/components/basic/label";
 import Link from "next/link";
 import { AnimatedWrapper } from "./animated-wrapper";
 import { useForm } from "react-hook-form";

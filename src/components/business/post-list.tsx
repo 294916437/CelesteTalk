@@ -6,24 +6,24 @@ import { useTimeFormat } from "@/hooks/post/useTimeFormat";
 import { useReplyDialog } from "@/hooks/post/useReplyDialog";
 import { useImagePreview } from "@/hooks/post/useImagePreview";
 import { MoreHorizontal, Heart, MessageCircle, Share2, Bookmark } from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/basic/avatar";
+import { Button } from "@/components/basic/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/basic/tooltip";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { VideoPlayer } from "./video-player";
-import { ReplyDialog } from "./reply-dialog";
-import { ImagePreview } from "./image-preview";
+} from "@/components/feedback/dropdown-menu";
+import { VideoPlayer } from "@/components/business/video-player";
+import { ReplyDialog } from "@/components/business/reply-dialog";
+import { ImagePreview } from "@/components/business/image-preview";
 import { cn } from "@/utils/utils";
 import { Post } from "@/types/post";
 

@@ -2,20 +2,20 @@
 
 import { useState, useEffect } from "react";
 import { PostService } from "@/services/post.service";
-import { PostDialog } from "@/components/post-dialog";
-import { PostList } from "@/components/post-list";
-import { PostDetails } from "@/components/post-details";
-import { SidebarLeft } from "@/components/sidebar-left";
-import { SidebarRight } from "@/components/sidebar-right";
+import { PostDialog } from "@/components/business/post-dialog";
+import { PostList } from "@/components/business/post-list";
+import { PostDetails } from "@/components/business/post-details";
+import { SidebarLeft } from "@/components/layout/sidebar-left";
+import { SidebarRight } from "@/components/layout/sidebar-right";
 import { Post } from "@/types/post";
 import {
   Breadcrumb,
   BreadcrumbItem,
   BreadcrumbList,
   BreadcrumbPage,
-} from "@/components/ui/breadcrumb";
-import { Separator } from "@/components/ui/separator";
-import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+} from "@/components/navigation/breadcrumb";
+import { Separator } from "@/components/basic/separator";
+import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/layout/sidebar";
 
 export default function Page() {
   // 1. 所有hooks都放在最顶层

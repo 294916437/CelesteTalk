@@ -1,12 +1,12 @@
 "use client";
 
 import * as React from "react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Textarea } from "@/components/ui/textarea";
-import { Separator } from "@/components/ui/separator";
-import { VisuallyHidden } from "@/components/ui/visually-hidden";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/basic/avatar";
+import { Button } from "@/components/basic/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/data/dialog";
+import { Textarea } from "@/components/basic/textarea";
+import { Separator } from "@/components/basic/separator";
+import { VisuallyHidden } from "@/components/feedback/visually-hidden";
 import { Post } from "@/types/post";
 
 function formatTime(timestamp: string): string {

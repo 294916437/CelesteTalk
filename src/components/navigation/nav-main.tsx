@@ -1,8 +1,8 @@
 "use client";
 
 import { LucideIcon, PenSquare } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar";
+import { Button } from "@/components/basic/button";
+import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@/components/layout/sidebar";
 
 export interface NavItem {
   title: string;

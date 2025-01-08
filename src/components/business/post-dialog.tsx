@@ -1,26 +1,26 @@
 "use client";
 
 import * as React from "react";
-import { Image, Video, Smile, MapPin, Calendar, X, Loader2 } from 'lucide-react';
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
+import { Image, Video, Smile, MapPin, Calendar, X, Loader2 } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/basic/avatar";
+import { Button } from "@/components/basic/button";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog";
-import { Separator } from "@/components/ui/separator";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Textarea } from "@/components/ui/textarea";
+} from "@/components/data/dialog";
+import { Separator } from "@/components/basic/separator";
+import { ScrollArea } from "@/components/feedback/scroll-area";
+import { Textarea } from "@/components/basic/textarea";
 import { cn } from "@/utils/utils";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "@/components/ui/tooltip";
+} from "@/components/basic/tooltip";
 
 interface PostDialogProps {
   user?: {
@@ -28,7 +28,10 @@ interface PostDialogProps {
     handle: string;
     avatar: string;
   };
-  onPost?: (post: { content: string; media: { type: 'image' | 'video'; url: string }[] }) => void;
+  onPost?: (post: {
+    content: string;
+    media: { type: "image" | "video"; url: string }[];
+  }) => void;
 }
 
 export function PostDialog({
@@ -41,7 +44,7 @@ export function PostDialog({
 }: PostDialogProps) {
   const [open, setOpen] = React.useState(false);
   const [content, setContent] = React.useState("");
-  const [media, setMedia] = React.useState<{ type: 'image' | 'video'; url: string }[]>([]);
+  const [media, setMedia] = React.useState<{ type: "image" | "video"; url: string }[]>([]);
   const [isUploading, setIsUploading] = React.useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
@@ -53,8 +56,8 @@ export function PostDialog({
         // Simulate upload delay
         await new Promise((resolve) => setTimeout(resolve, 1000));
         const newMedia = Array.from(files).map((file) => ({
-          type: file.type.startsWith('image/') ? 'image' as const : 'video' as const,
-          url: URL.createObjectURL(file)
+          type: file.type.startsWith("image/") ? ("image" as const) : ("video" as const),
+          url: URL.createObjectURL(file),
         }));
         setMedia((prev) => [...prev, ...newMedia].slice(0, 4)); // Max 4 media files
       } finally {
@@ -115,7 +118,7 @@ export function PostDialog({
                   )}>
                   {media.map((item, index) => (
                     <div key={index} className='relative group aspect-square'>
-                      {item.type === 'image' ? (
+                      {item.type === "image" ? (
                         <img
                           src={item.url}
                           alt=''
@@ -239,8 +242,7 @@ export function PostDialog({
                 <Button
                   className='rounded-full'
                   disabled={isOverLimit || content.length === 0}
-                  onClick={handlePost}
-                >
+                  onClick={handlePost}>
                   发布
                 </Button>
               </div>
@@ -251,4 +253,3 @@ export function PostDialog({
     </Dialog>
   );
 }
-

@@ -1,9 +1,9 @@
 "use client";
 
 import * as React from "react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/basic/avatar";
+import { Button } from "@/components/basic/button";
+import { Separator } from "@/components/basic/separator";
 import { VideoPlayer } from "./video-player";
 import { ReplyDialog } from "./reply-dialog";
 import { Post } from "./post-list";
@@ -21,7 +21,7 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from "@/components/feedback/dropdown-menu";
 import { cn } from "@/utils/utils";
 
 export interface Reply {

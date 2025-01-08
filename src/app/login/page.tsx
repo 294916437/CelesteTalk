@@ -1,6 +1,6 @@
 "use client";
 
-import { LoginForm } from "@/components/login-form";
+import { LoginForm } from "@/components/form/login-form";
 import { motion } from "framer-motion";
 
 export default function LoginPage() {
