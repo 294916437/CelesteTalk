@@ -1,27 +1,122 @@
 from datetime import datetime, timezone
 from typing import List
 from beanie import PydanticObjectId
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, File, Form, UploadFile
 from fastapi.encoders import jsonable_encoder
+from fastapi.openapi.models import Example
+import json
 
-from models.Post import Post
+from models.Post import Post, Media
 from models.Comment import Comment
 import logging
 from pydantic import ValidationError
 from middleware.response import CommonResponse
 from utils.time import format_datetime_now
+from utils.file_handler import save_upload_file, validate_file_type, get_media_type
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
-@router.post("", response_description="发布帖子")
-async def create_post(post: Post):
-    now = datetime.now(timezone.utc)
-    post.createdAt = now
-    post.updatedAt = now
-    await post.create()
-    return post
+@router.post(
+    "", 
+    response_description="发布帖子",
+    openapi_extra={
+        "requestBody": {
+            "content": {
+                "multipart/form-data": {
+                    "schema": {
+                        "type": "object",
+                        "properties": {
+                            "data": {
+                                "type": "string",
+                                "example": json.dumps({
+                                    "authorId": "507f1f77bcf86cd799439011",
+                                    "content": "这是一条测试帖子"
+                                })
+                            },
+                            "files": {
+                                "type": "array",
+                                "items": {
+                                    "type": "string",
+                                    "format": "binary"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+)
+async def create_post(
+    data: str = Form(..., description="包含authorId、content等信息的JSON字符串"),
+    files: List[UploadFile] = File(None, description="要上传的图片或视频文件列表")
+):
+    try:
+        # 解析JSON字符串
+        post_data = json.loads(data)
+        
+        # 验证必要的请求数据
+        if not post_data.get("authorId") or not post_data.get("content"):
+            raise HTTPException(
+                status_code=400, 
+                detail="Missing required fields: authorId or content"
+            )
+
+        media_list = []
+        
+        # 处理上传的文件
+        if files:
+            for file in files:
+                # 自动识别并验证文件类型
+                media_type = get_media_type(file.content_type)
+                if not media_type:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"Invalid file type for {file.filename}"
+                    )
+                
+                # 保存文件到静态目录
+                file_path = await save_upload_file(file, media_type)
+                
+                # 添加到媒体列表
+                media_list.append(Media(
+                    type=media_type,
+                    url=file_path
+                ))
+        
+        # 创建新帖子
+        new_post = Post(
+            authorId=PydanticObjectId(post_data["authorId"]),
+            content=post_data["content"],
+            media=media_list,
+            isRepost=False,
+            createdAt=datetime.now(timezone.utc),
+            updatedAt=datetime.now(timezone.utc)
+        )
+        
+        # 如果是回复其他帖子
+        if "replyTo" in post_data:
+            new_post.replyTo = PydanticObjectId(post_data["replyTo"])
+            
+        # 保存到数据库
+        await new_post.create()
+        
+        return CommonResponse(
+            code=200,
+            msg="success",
+            data={"post": jsonable_encoder(new_post)}
+        )
+        
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=400, detail="Invalid JSON format in data field")
+    except ValidationError as ve:
+        logger.error(f"Validation error: {str(ve)}")
+        raise HTTPException(status_code=400, detail=str(ve))
+    except Exception as e:
+        logger.error(f"Error in create_post: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/{postId}", response_description="获取指定帖子")
@@ -173,7 +268,7 @@ async def get_user_likes(userId: str):
         
         # 查询所有点赞用户中包含该用户 ID 的帖子
         liked_posts = await Post.find(
-            Post.likes.contains(user_id)
+            {"likes": {"$in": [user_id]}}
         ).sort(-Post.createdAt).to_list()
         
         return CommonResponse(
@@ -190,6 +285,32 @@ async def get_user_likes(userId: str):
     except Exception as e:
         logger.error(f"Error getting liked posts for user {userId}: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/home", response_description="获取主页帖子")
+async def get_home_posts():
+    pass
+
+
+@router.get("/search", response_description="搜索帖子")
+async def search_posts(kw: str):
+    try:
+        # 使用正则表达式进行模糊搜索
+        posts = await Post.find(
+            {"content": {"$regex": kw, "$options": "i"}}
+        ).sort(-Post.createdAt).to_list()
+        
+        return CommonResponse(
+            code=200,
+            msg="success",
+            data={
+                "posts": jsonable_encoder(posts),
+                "total": len(posts)
+            }
+        )
+    except Exception as e:
+        logger.error(f"Error searching posts: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 @router.get("/post/{post_id}", response_description="获取帖子的所有评论")
 async def get_post_comments(post_id: str):
