@@ -4,16 +4,16 @@ export interface Comment {
   postId: string;
   authorId: string;
   content: string;
-  createdAt: Date;
+  createdAt: string;
 
   // 可选字段
   likes: string[]; // 存储用户ID字符串
-  replyTo?: string; // 回复评论ID字符串
-  updatedAt: Date;
+  replyTo: string | null; // 回复评论ID字符串
+  updatedAt: string;
 
   // 前端展示用的扩展字段
   author?: {
-    name: string;
+    username: string;
     handle: string;
     avatar: string;
   };

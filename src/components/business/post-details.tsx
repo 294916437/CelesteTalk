@@ -4,9 +4,9 @@ import * as React from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/basic/avatar";
 import { Button } from "@/components/basic/button";
 import { Separator } from "@/components/basic/separator";
-import { VideoPlayer } from "./video-player";
-import { ReplyDialog } from "./reply-dialog";
-import { Post } from "./post-list";
+import { VideoPlayer } from "@/components/business/video-player";
+import { ReplyDialog } from "@/components/business/reply-dialog";
+import { Post } from "@/types/post";
 import {
   Heart,
   MessageCircle,
@@ -23,40 +23,28 @@ import {
   DropdownMenuTrigger,
 } from "@/components/feedback/dropdown-menu";
 import { cn } from "@/utils/utils";
-
-export interface Reply {
-  id: string;
-  author: {
-    name: string;
-    handle: string;
-    avatar: string;
-  };
-  content: string;
-  timestamp: string;
-  replyTo: string | null;
-  stats: {
-    likes: number;
-    replies: number;
-    shares: number;
-  };
-}
+import { Comment } from "@/types/comment";
 
 interface PostDetailsProps {
   post: Post;
   onBack: () => void;
 }
 
-const staticReplies: Reply[] = [
+const staticReplies: Comment[] = [
   {
-    id: "1",
+    _id: "1",
+    postId: "post1",
+    authorId: "user1",
+    content: "Great post! I totally agree with your points.",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    likes: [],
+    replyTo: null,
     author: {
-      name: "Alice Johnson",
+      username: "Alice Johnson",
       handle: "@alice_j",
       avatar: "/placeholder.svg",
     },
-    content: "Great post! I totally agree with your points.",
-    timestamp: "2023-06-15T10:30:00Z",
-    replyTo: null,
     stats: {
       likes: 5,
       replies: 1,
@@ -64,15 +52,19 @@ const staticReplies: Reply[] = [
     },
   },
   {
-    id: "2",
+    _id: "2",
+    postId: "post1",
+    authorId: "user2",
+    content: "Interesting perspective. Have you considered the impact on...",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    likes: [],
+    replyTo: null,
     author: {
-      name: "Bob Smith",
+      username: "Bob Smith",
       handle: "@bobsmith",
       avatar: "/placeholder.svg",
     },
-    content: "Interesting perspective. Have you considered the impact on...",
-    timestamp: "2023-06-15T11:15:00Z",
-    replyTo: null,
     stats: {
       likes: 3,
       replies: 0,
@@ -80,15 +72,19 @@ const staticReplies: Reply[] = [
     },
   },
   {
-    id: "3",
+    _id: "3",
+    postId: "post1",
+    authorId: "user3",
+    content: "I disagree. Here's why...",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    likes: [],
+    replyTo: "1",
     author: {
-      name: "Carol White",
+      username: "Carol White",
       handle: "@carol_white",
       avatar: "/placeholder.svg",
     },
-    content: "I disagree. Here's why...",
-    timestamp: "2023-06-15T12:00:00Z",
-    replyTo: "1",
     stats: {
       likes: 2,
       replies: 4,
@@ -136,25 +132,16 @@ export function PostDetails({ post, onBack }: PostDetailsProps) {
   const [isLiked, setIsLiked] = React.useState(false);
   const [isBookmarked, setIsBookmarked] = React.useState(false);
   const [replyDialogOpen, setReplyDialogOpen] = React.useState(false);
-  const [replies, setReplies] = React.useState<Reply[]>(staticReplies);
-  const [replyingTo, setReplyingTo] = React.useState<Reply | null>(null);
+  const [replies, setReplies] = React.useState<Comment[]>(staticReplies);
+  const [replyingTo, setReplyingTo] = React.useState<Comment | null>(null);
   const [isClient, setIsClient] = React.useState(false);
 
   React.useEffect(() => {
     setIsClient(true);
   }, []);
 
-  const handleLike = React.useCallback((id: string | null = null) => {
-    if (id === null) {
-      setIsLiked((prev) => !prev);
-    } else {
-      setReplies((prevReplies) =>
-        prevReplies.map((reply) =>
-          reply.id === id
-            ? { ...reply, stats: { ...reply.stats, likes: reply.stats.likes + 1 } }
-            : reply
-        )
-      );
+  const handleLike = React.useCallback((_id: string | null = null) => {
+    if (_id === null) {
     }
   }, []);
 
@@ -162,17 +149,21 @@ export function PostDetails({ post, onBack }: PostDetailsProps) {
     setIsBookmarked((prev) => !prev);
   }, []);
 
-  const handleReply = React.useCallback((content: string, replyToId: string | null) => {
-    const newReply: Reply = {
-      id: Date.now().toString(),
+  const handleReply = React.useCallback((content: string, replyTo_Id: string) => {
+    const newReply: Comment = {
+      _id: Date.now().toString(),
+      postId: post._id,
       content,
+      authorId: "user",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      replyTo: replyTo_Id,
+      likes: [],
       author: {
-        name: "当前用户",
+        username: "当前用户",
         handle: "@currentuser",
         avatar: "/placeholder-avatar.jpg",
       },
-      timestamp: new Date().toISOString(),
-      replyTo: replyToId,
       stats: {
         likes: 0,
         replies: 0,
@@ -182,21 +173,12 @@ export function PostDetails({ post, onBack }: PostDetailsProps) {
     setReplies((prev) => [newReply, ...prev]);
   }, []);
 
-  const handleShare = React.useCallback((id: string | null = null) => {
-    if (id === null) {
-      console.log("Sharing main post");
-    } else {
-      setReplies((prevReplies) =>
-        prevReplies.map((reply) =>
-          reply.id === id
-            ? { ...reply, stats: { ...reply.stats, shares: reply.stats.shares + 1 } }
-            : reply
-        )
-      );
+  const handleShare = React.useCallback((_id: string | null = null) => {
+    if (_id === null) {
     }
   }, []);
 
-  const openReplyDialog = React.useCallback((reply: Reply | null) => {
+  const openReplyDialog = React.useCallback((reply: Comment | null) => {
     setReplyingTo(reply);
     setReplyDialogOpen(true);
   }, []);
@@ -222,14 +204,14 @@ export function PostDetails({ post, onBack }: PostDetailsProps) {
       <article className='px-4 py-3 border-b border-border'>
         <div className='flex items-start gap-3'>
           <Avatar className='h-12 w-12'>
-            <AvatarImage src={post.author.avatar} />
-            <AvatarFallback>{post.author.name[0]}</AvatarFallback>
+            <AvatarImage src={post.author?.avatar} />
+            <AvatarFallback>{post.author?.username}</AvatarFallback>
           </Avatar>
           <div className='min-w-0 flex-1'>
             <div className='flex items-center justify-between'>
               <div className='flex flex-col'>
-                <span className='font-bold text-base'>{post.author.name}</span>
-                <span className='text-muted-foreground text-sm'>{post.author.handle}</span>
+                <span className='font-bold text-base'>{post.author?.username}</span>
+                <span className='text-muted-foreground text-sm'>{post.author?.handle}</span>
               </div>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -249,7 +231,7 @@ export function PostDetails({ post, onBack }: PostDetailsProps) {
             </div>
             <div className='text-xl break-words whitespace-pre-wrap my-3'>{post.content}</div>
             {post.media && post.media.length > 0 && (
-              <div className='my-3 rounded-2xl overflow-hidden'>
+              <div className='my-3 rounded-2xl overflow-h_idden'>
                 {post.media.map((media, index) =>
                   media.type === "image" ? (
                     <img
@@ -259,15 +241,15 @@ export function PostDetails({ post, onBack }: PostDetailsProps) {
                       className='w-full h-auto object-cover'
                     />
                   ) : (
-                    <div key={index} className='aspect-video'>
-                      <VideoPlayer src={media.url} subtitles={media.subtitles} />
+                    <div key={index} className='aspect-v_ideo'>
+                      <VideoPlayer src={media.url} />
                     </div>
                   )
                 )}
               </div>
             )}
             <div className='text-muted-foreground text-sm mb-3'>
-              {formatExactTime(post.timestamp)}
+              {formatExactTime(post.createdAt)}
               <span className='mx-1'>·</span>
               <span>{post.stats.views} 浏览</span>
             </div>
@@ -324,7 +306,7 @@ export function PostDetails({ post, onBack }: PostDetailsProps) {
         <div className='relative'>
           {replies.map((reply, index) => (
             <div
-              key={reply.id}
+              key={reply._id}
               className={cn(
                 "relative py-3 transition-colors duration-200 hover:bg-muted/30",
                 index !== replies.length - 1 && "border-b border-border"
@@ -332,8 +314,8 @@ export function PostDetails({ post, onBack }: PostDetailsProps) {
               <div className='flex gap-3'>
                 <div className='flex flex-col items-center'>
                   <Avatar className='h-10 w-10 transition-transform duration-200 hover:scale-105'>
-                    <AvatarImage src={reply.author.avatar} />
-                    <AvatarFallback>{reply.author.name[0]}</AvatarFallback>
+                    <AvatarImage src={reply.author?.avatar} />
+                    <AvatarFallback>{reply.author?.username}</AvatarFallback>
                   </Avatar>
                   {index !== replies.length - 1 && (
                     <div className='w-0.5 flex-1 bg-border/50 mt-2 relative'>
@@ -344,23 +326,20 @@ export function PostDetails({ post, onBack }: PostDetailsProps) {
                 <div className='flex-1 min-w-0'>
                   <div className='flex items-center gap-1 text-sm'>
                     <span className='font-bold hover:underline cursor-pointer transition-colors'>
-                      {reply.author.name}
+                      {reply.author?.username}
                     </span>
                     <span className='text-muted-foreground hover:underline cursor-pointer transition-colors'>
-                      {reply.author.handle}
+                      {reply.author?.handle}
                     </span>
                     <span className='text-muted-foreground'>·</span>
                     <span className='text-muted-foreground hover:underline cursor-pointer transition-colors'>
-                      {formatPostTime(reply.timestamp)}
+                      {formatPostTime(reply.createdAt)}
                     </span>
                   </div>
                   {reply.replyTo && (
                     <div className='text-sm text-muted-foreground mb-1'>
                       回复
-                      <span className='text-primary'>
-                        {replies.find((r) => r.id === reply.replyTo)?.author.handle ||
-                          post.author.handle}
-                      </span>
+                      <span className='text-primary'>{/* 回复指定用户的名称 */}</span>
                     </div>
                   )}
                   <p className='mt-1 break-words text-[15px] leading-normal text-foreground/90'>
@@ -368,13 +347,13 @@ export function PostDetails({ post, onBack }: PostDetailsProps) {
                   </p>
                   <div className='flex items-center gap-6 mt-2'>
                     <button
-                      onClick={() => handleLike(reply.id)}
+                      onClick={() => handleLike(reply._id)}
                       className='group flex items-center gap-1 text-muted-foreground transition-colors duration-200'>
                       <div className='p-1.5 -ml-1.5 rounded-full transition-colors duration-200 group-hover:bg-red-100 group-hover:text-red-500'>
                         <Heart className='h-4 w-4' />
                       </div>
                       <span className='text-xs transition-colors duration-200 group-hover:text-red-500'>
-                        {reply.stats.likes}
+                        {reply.stats?.likes}
                       </span>
                     </button>
                     <button
@@ -384,17 +363,17 @@ export function PostDetails({ post, onBack }: PostDetailsProps) {
                         <MessageCircle className='h-4 w-4' />
                       </div>
                       <span className='text-xs transition-colors duration-200 group-hover:text-blue-500'>
-                        {reply.stats.replies}
+                        {reply.stats?.replies}
                       </span>
                     </button>
                     <button
-                      onClick={() => handleShare(reply.id)}
+                      onClick={() => handleShare(reply._id)}
                       className='group flex items-center gap-1 text-muted-foreground transition-colors duration-200'>
                       <div className='p-1.5 -ml-1.5 rounded-full transition-colors duration-200 group-hover:bg-green-100 group-hover:text-green-500'>
                         <Share2 className='h-4 w-4' />
                       </div>
                       <span className='text-xs transition-colors duration-200 group-hover:text-green-500'>
-                        {reply.stats.shares}
+                        {reply.stats?.shares}
                       </span>
                     </button>
                   </div>

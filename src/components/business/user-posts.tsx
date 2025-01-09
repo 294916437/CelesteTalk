@@ -1,86 +1,148 @@
 "use client";
 
 import * as React from "react";
-import { usePostInteraction } from "@/hooks/post/usePostInteraction";
-import { useTimeFormat } from "@/hooks/post/useTimeFormat";
-import { useReplyDialog } from "@/hooks/post/useReplyDialog";
-import { useImagePreview } from "@/hooks/post/useImagePreview";
-import { MoreHorizontal, Heart, MessageCircle, Share2, Bookmark } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { MoreHorizontal, Heart, MessageCircle, Share2, Bookmark, Trash2 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/basic/avatar";
 import { Button } from "@/components/basic/button";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/basic/tooltip";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/feedback/dropdown-menu";
-import { VideoPlayer } from "@/components/business/video-player";
-import { ReplyDialog } from "@/components/business/reply-dialog";
-import { ImagePreview } from "@/components/business/image-preview";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/data/alert-dialog";
+import { toast } from "react-toastify";
+import { VideoPlayer } from "./video-player";
+import { ImagePreview } from "./image-preview";
 import { cn } from "@/utils/utils";
 import { Post } from "@/types/post";
 import Link from "next/link";
-interface PostListProps {
-  initialPosts: Post[];
-  handlePostClick: (post: Post) => void;
-  onRefresh?: () => Promise<void>; // 添加刷新回调
-  isLoading?: boolean;
-  error?: string | null;
+import { ReplyDialog } from "./reply-dialog";
+
+interface UserPostsProps {
+  posts: Post[];
+  onDeletePost: (postId: string) => void;
+  setPosts: React.Dispatch<React.SetStateAction<Post[]>>;
+  currentUser: { handle: string } | null;
 }
 
-export function PostList({
-  initialPosts,
-  handlePostClick,
-  onRefresh,
-  isLoading = false,
-  error = null,
-}: PostListProps) {
-  const { likedPosts, bookmarkedPosts, toggleLike, toggleBookmark } = usePostInteraction();
-  const { replyingTo, replyDialogOpen, setReplyDialogOpen, openReplyDialog, handleReply } =
-    useReplyDialog();
-  const {
-    previewImages,
-    initialImageIndex,
-    isPreviewOpen,
-    setIsPreviewOpen,
-    handleImageClick,
-  } = useImagePreview();
+export function UserPosts({ posts, onDeletePost, setPosts, currentUser }: UserPostsProps) {
+  const router = useRouter();
+  const [likedPosts, setLikedPosts] = React.useState<Set<string>>(new Set());
+  const [bookmarkedPosts, setBookmarkedPosts] = React.useState<Set<string>>(new Set());
+  const [deletePostId, setDeletePostId] = React.useState<string | null>(null);
+  const [previewImages, setPreviewImages] = React.useState<string[]>([]);
+  const [initialImageIndex, setInitialImageIndex] = React.useState(0);
+  const [isPreviewOpen, setIsPreviewOpen] = React.useState(false);
+  const [replyDialogOpen, setReplyDialogOpen] = React.useState(false);
+  const [replyingTo, setReplyingTo] = React.useState<Post | null>(null);
 
-  if (isLoading) {
-    return <div className='flex justify-center p-4'>加载中...</div>;
-  }
+  const handleImageClick = (post: Post, index: number, event: React.MouseEvent) => {
+    event.stopPropagation();
+    const images = post.media?.filter((m) => m.type === "image").map((m) => m.url) || [];
+    setPreviewImages(images);
+    setInitialImageIndex(index);
+    setIsPreviewOpen(true);
+  };
 
-  if (error) {
-    return (
-      <div className='flex flex-col items-center p-4 text-red-500'>
-        <p>{error}</p>
-        {onRefresh && (
-          <button className='mt-2 text-blue-500 hover:underline' onClick={onRefresh}>
-            重试
-          </button>
-        )}
-      </div>
-    );
-  }
+  const toggleLike = (postId: string, event: React.MouseEvent) => {
+    event.stopPropagation();
+    setLikedPosts((prev) => {
+      const newSet = new Set(prev);
+      if (prev.has(postId)) {
+        newSet.delete(postId);
+      } else {
+        newSet.add(postId);
+      }
+      return newSet;
+    });
+  };
+
+  const toggleBookmark = (postId: string, event: React.MouseEvent) => {
+    event.stopPropagation();
+    setBookmarkedPosts((prev) => {
+      const newSet = new Set(prev);
+      if (prev.has(postId)) {
+        newSet.delete(postId);
+      } else {
+        newSet.add(postId);
+      }
+      return newSet;
+    });
+  };
+
+  const handleDelete = async (postId: string) => {
+    try {
+      await onDeletePost(postId);
+      toast.success("帖子已删除");
+    } catch (error) {
+      toast.error("删除失败，请重试");
+    } finally {
+      setDeletePostId(null);
+    }
+  };
+
+  const formatTime = (timestamp: string) => {
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+    if (diffInSeconds < 60) {
+      return "刚刚";
+    } else if (diffInSeconds < 3600) {
+      return `${Math.floor(diffInSeconds / 60)}分钟前`;
+    } else if (diffInSeconds < 86400) {
+      return `${Math.floor(diffInSeconds / 3600)}小时前`;
+    } else {
+      return new Intl.DateTimeFormat("zh-CN", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      }).format(date);
+    }
+  };
+
+  const handleReply = React.useCallback(
+    (content: string, replyToId: string | null) => {
+      // 这里应该调用 API 来保存回复
+      console.log(`Replying to post ${replyToId}: ${content}`);
+      // 更新本地状态（这应该在 API 调用成功后进行）
+      setPosts((prevPosts) =>
+        prevPosts.map((post) =>
+          post._id === replyToId
+            ? { ...post, stats: { ...post.stats, comments: post.stats.comments + 1 } }
+            : post
+        )
+      );
+      setReplyDialogOpen(false);
+    },
+    [setPosts]
+  );
+
+  const openReplyDialog = React.useCallback((post: Post) => {
+    setReplyingTo(post);
+    setReplyDialogOpen(true);
+  }, []);
 
   return (
     <>
       <div className='flex flex-col divide-y divide-border'>
-        {initialPosts.map((post) => (
+        {posts.map((post) => (
           <article
             key={post._id}
             className='p-4 transition-colors duration-200 hover:bg-black/[0.02] dark:hover:bg-white/[0.02] cursor-pointer'
-            onClick={() => handlePostClick(post)}>
-            {/* Post Content */}
+            onClick={() => router.push(`/dashboard/profile?postId=${post._id}`)}>
             <div className='flex gap-4'>
-              {/* Avatar Section */}
               <Link
                 href={`/dashboard/profile/${post.author.handle.slice(1)}`}
                 onClick={(e) => e.stopPropagation()}>
@@ -89,42 +151,23 @@ export function PostList({
                   <AvatarFallback>{post.author.username}</AvatarFallback>
                 </Avatar>
               </Link>
-
-              {/* Main Content Section */}
               <div className='flex-1 space-y-2'>
-                {/* Header */}
                 <div className='flex items-start justify-between'>
-                  {/* Author Info */}
                   <div className='flex flex-wrap items-center gap-1'>
-                    <span className='font-semibold hover:underline cursor-pointer'>
-                      {post.author.username}
-                    </span>
-                    <span className='text-muted-foreground'>{post.author.username}</span>
+                    <Link
+                      href={`/dashboard/profile/${post.author.handle.slice(1)}`}
+                      onClick={(e) => e.stopPropagation()}
+                      className='flex items-center gap-1 hover:underline'>
+                      <span className='font-semibold transition-colors'>
+                        {post.author.username}
+                      </span>
+                      <span className='text-muted-foreground'>{post.author.handle}</span>
+                    </Link>
                     <span className='text-muted-foreground'>·</span>
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <span className='text-muted-foreground hover:underline cursor-pointer transition-colors'>
-                            {useTimeFormat(post.updatedAt)}
-                          </span>
-                        </TooltipTrigger>
-                        <TooltipContent
-                          side='bottom'
-                          className='bg-popover/95 backdrop-blur-sm'>
-                          {new Date(post.updatedAt).toLocaleString("zh-CN", {
-                            year: "numeric",
-                            month: "long",
-                            day: "numeric",
-                            hour: "2-digit",
-                            minute: "2-digit",
-                            hour12: false,
-                          })}
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
+                    <span className='text-muted-foreground hover:underline cursor-pointer transition-colors'>
+                      {formatTime(post.createdAt)}
+                    </span>
                   </div>
-
-                  {/* Actions Dropdown */}
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button
@@ -137,25 +180,28 @@ export function PostList({
                     </DropdownMenuTrigger>
                     <DropdownMenuContent
                       align='end'
-                      className='w-[180px] bg-bg-100 border-border animate-in slide-in-from-top-2 duration-200'>
-                      <DropdownMenuItem className='text-text-100 cursor-pointer transition-colors duration-200'>
+                      className='w-[180px] bg-background/95 backdrop-blur-sm rounded-xl shadow-lg animate-in slide-in-from-top-2 duration-200'>
+                      <DropdownMenuItem className='flex items-center px-3 py-2.5 text-sm cursor-pointer transition-colors hover:bg-accent focus:bg-accent rounded-lg mx-1 my-1'>
                         复制链接
                       </DropdownMenuItem>
-                      <DropdownMenuItem className='text-text-100 cursor-pointer transition-colors duration-200'>
+                      <DropdownMenuItem className='flex items-center px-3 py-2.5 text-sm cursor-pointer transition-colors hover:bg-accent focus:bg-accent rounded-lg mx-1 my-1'>
                         分享
                       </DropdownMenuItem>
-                      <DropdownMenuSeparator className='bg-border' />
-                      <DropdownMenuItem className='text-destructive cursor-pointer transition-colors duration-200 hover:text-destructive hover:bg-destructive/10'>
-                        举报
-                      </DropdownMenuItem>
+                      {currentUser && currentUser.handle === post.author.handle && (
+                        <DropdownMenuItem
+                          className='flex items-center px-3 py-2.5 text-sm cursor-pointer transition-colors hover:bg-destructive/20 focus:bg-destructive/20 text-destructive hover:text-destructive-foreground rounded-lg mx-1 my-1'
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDeletePostId(post._id);
+                          }}>
+                          <Trash2 className='h-4 w-4 mr-2' />
+                          删除帖子
+                        </DropdownMenuItem>
+                      )}
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
-
-                {/* Post Content */}
                 <p className='text-sm'>{post.content}</p>
-
-                {/* Media Content */}
                 {post.media && post.media.length > 0 && (
                   <div
                     className={cn(
@@ -194,8 +240,6 @@ export function PostList({
                     )}
                   </div>
                 )}
-
-                {/* Interaction Buttons */}
                 <div className='flex gap-4 pt-2'>
                   <Button
                     variant='ghost'
@@ -233,7 +277,6 @@ export function PostList({
                   <Button
                     variant='ghost'
                     size='sm'
-                    onClick={(e) => e.stopPropagation()}
                     className='h-8 gap-1.5 text-muted-foreground transition-colors duration-200 hover:text-green-500 hover:bg-green-50'>
                     <Share2 className='h-4 w-4 transition-transform duration-200 group-hover:scale-110' />
                     <span className='text-xs'>{post.stats.shares}</span>
@@ -260,23 +303,40 @@ export function PostList({
         ))}
       </div>
 
-      {/* Dialogs */}
-      {replyingTo && (
-        <ReplyDialog
-          open={replyDialogOpen}
-          onOpenChange={setReplyDialogOpen}
-          post={replyingTo.post}
-          replyTo={replyingTo.reply ?? null} // replyTo是回复评论的场景
-          onReply={handleReply}
-        />
-      )}
-      {/* Image Preview */}
+      <AlertDialog open={!!deletePostId} onOpenChange={() => setDeletePostId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>确认删除</AlertDialogTitle>
+            <AlertDialogDescription>
+              这条帖子将被永久删除，此操作无法撤销。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>取消</AlertDialogCancel>
+            <AlertDialogAction
+              className='bg-destructive text-destructive-foreground hover:bg-destructive/90'
+              onClick={() => deletePostId && handleDelete(deletePostId)}>
+              删除
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <ImagePreview
         images={previewImages}
         initialIndex={initialImageIndex}
         open={isPreviewOpen}
         onOpenChange={setIsPreviewOpen}
       />
+      {replyingTo && (
+        <ReplyDialog
+          open={replyDialogOpen}
+          onOpenChange={setReplyDialogOpen}
+          post={replyingTo!}
+          replyTo={null}
+          onReply={handleReply}
+        />
+      )}
     </>
   );
 }

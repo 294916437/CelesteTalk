@@ -1,5 +1,5 @@
 import React from "react";
-import { PasswordForm } from "@/components/password-form";
+import { PasswordForm } from "@/components/form/password-form";
 
 export default function PasswordPage() {
   return (

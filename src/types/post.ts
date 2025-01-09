@@ -5,7 +5,6 @@ export interface Post {
   content: string;
   createdAt: string;
   isRepost: boolean;
-
   // 可选字段
   media?: Array<{
     type: "image" | "video";
@@ -16,7 +15,7 @@ export interface Post {
   replyTo?: string;
   updatedAt: string;
   // 前端展示用扩展字段 - 通过API额外查询获得
-  author?: {
+  author: {
     username: string;
     handle: string;
     avatar: string;

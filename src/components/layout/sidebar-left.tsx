@@ -1,42 +1,51 @@
 "use client";
 
-import * as React from "react";
-import {
-  Command,
-  Home,
-  Search,
-  Bell,
-  Mail,
-  Bookmark,
-  Users,
-  User,
-  MoreHorizontal,
-  BadgeCheck,
-} from "lucide-react";
-import { NavMain, NavItem } from "@/components/navigation/nav-main";
-import { Sidebar, SidebarHeader } from "@/components/layout/sidebar";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { Button } from "@/components/basic/button";
+import { PostDialog } from "@/components/business/post-dialog";
+import { Sidebar, SidebarContent, SidebarFooter } from "@/components/layout/sidebar";
+import { Home, User, Bell, Mail, Bookmark, List, Users, Lock } from "lucide-react";
 
-const navItems: NavItem[] = [
-  { title: "首页", url: "/", icon: Home, isActive: true },
-  { title: "探索", url: "/explore", icon: Search },
-  { title: "通知", url: "/notifications", icon: Bell },
-  { title: "消息", url: "/messages", icon: Mail },
-  { title: "书签", url: "/bookmarks", icon: Bookmark },
-  { title: "社区", url: "/communities", icon: Users },
-  { title: "已认证", url: "/verified", icon: BadgeCheck },
-  { title: "个人资料", url: "/profile", icon: User },
-  { title: "更多", url: "/more", icon: MoreHorizontal },
+const menuItems = [
+  { icon: Home, label: "首页", href: "/dashboard" },
+  { icon: Bell, label: "通知", href: "/dashboard/notifications" },
+  { icon: Mail, label: "消息", href: "/dashboard/messages" },
+  { icon: Bookmark, label: "书签", href: "/dashboard/bookmarks" },
+  { icon: List, label: "列表", href: "/dashboard/lists" },
+  { icon: User, label: "个人资料", href: "/dashboard/profile" },
+  { icon: Users, label: "社区", href: "/dashboard/communities" },
+  { icon: Lock, label: "修改密码", href: "/dashboard/change-password" },
 ];
 
-export function SidebarLeft({}: React.ComponentProps<typeof Sidebar>) {
+export function SidebarLeft() {
+  const pathname = usePathname();
+
   return (
-    <Sidebar className='border-r-0 bg-background flex flex-col items-end pr-4'>
-      <SidebarHeader className='p-4 w-full max-w-[275px]'>
-        <div className='flex items-center justify-start mb-4 pl-4'>
-          <Command className='h-8 w-8' />
-        </div>
-        <NavMain items={navItems} />
-      </SidebarHeader>
+    <Sidebar side='left' className='border-r'>
+      <SidebarContent className='flex flex-col gap-4 p-4'>
+        <Link
+          href='/dashboard'
+          className='flex h-12 w-12 items-center justify-center rounded-full bg-primary text-primary-foreground hover:bg-primary/90'>
+          {/* Replace with your logo */}
+          <span className='sr-only'>Logo</span>
+          🐦
+        </Link>
+        {menuItems.map((item) => (
+          <Button
+            key={item.href}
+            variant={pathname === item.href ? "secondary" : "ghost"}
+            className='justify-start gap-4 text-xl py-3'
+            asChild>
+            <Link href={item.href}>
+              <item.icon className='h-6 w-6' />
+              <span>{item.label}</span>
+            </Link>
+          </Button>
+        ))}
+        <PostDialog />
+      </SidebarContent>
+      <SidebarFooter>{/* Add footer content here */}</SidebarFooter>
     </Sidebar>
   );
 }

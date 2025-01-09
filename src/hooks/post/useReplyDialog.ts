@@ -1,16 +1,17 @@
 import { useState } from "react";
 import { Post } from "@/types/post";
+import { Comment } from "@/types/comment";
 
 interface ReplyContext {
   post: Post; // 原始帖子
-  reply?: Post; // 要回复的评论（如果有）
+  reply?: Comment; // 要回复的评论（如果有）
 }
 
 export function useReplyDialog() {
   const [replyingTo, setReplyingTo] = useState<ReplyContext | null>(null);
   const [replyDialogOpen, setReplyDialogOpen] = useState(false);
 
-  const openReplyDialog = (post: Post, reply?: Post) => {
+  const openReplyDialog = (post: Post, reply?: Comment) => {
     setReplyingTo({ post, reply });
     setReplyDialogOpen(true);
   };

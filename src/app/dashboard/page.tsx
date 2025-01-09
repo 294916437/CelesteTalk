@@ -1,101 +1,144 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { PostService } from "@/services/post.service";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Post } from "@/types/post";
 import { PostDialog } from "@/components/business/post-dialog";
 import { PostList } from "@/components/business/post-list";
 import { PostDetails } from "@/components/business/post-details";
-import { SidebarLeft } from "@/components/layout/sidebar-left";
-import { SidebarRight } from "@/components/layout/sidebar-right";
-import { Post } from "@/types/post";
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbList,
-  BreadcrumbPage,
-} from "@/components/navigation/breadcrumb";
-import { Separator } from "@/components/basic/separator";
-import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/layout/sidebar";
 
-export default function Page() {
-  // 1. 所有hooks都放在最顶层
-  const [selectedPost, setSelectedPost] = useState<Post | null>(null);
+const getRelativeTimestamp = (hoursAgo: number) => {
+  const date = new Date();
+  date.setHours(date.getHours() - hoursAgo);
+  return date.toISOString();
+};
+
+// Sample initial posts
+const initialPosts: Post[] = [
+  {
+    _id: "1",
+    authorId: "user1",
+    content:
+      "Just launched my new project! 🚀 Really excited to share this with everyone. What do you think?",
+    createdAt: getRelativeTimestamp(2),
+    isRepost: false,
+    updatedAt: getRelativeTimestamp(2),
+    likes: [],
+    repostCount: 0,
+    author: {
+      username: "John Doe",
+      handle: "@johndoe",
+      avatar: "/placeholder.svg",
+    },
+    stats: {
+      likes: 42,
+      comments: 12,
+      shares: 5,
+      views: 150,
+    },
+  },
+  {
+    _id: "2",
+    authorId: "user2",
+    content:
+      "Had an amazing time at the tech conference today! Met so many brilliant minds. #TechConf2024",
+    createdAt: getRelativeTimestamp(5),
+    isRepost: false,
+    updatedAt: getRelativeTimestamp(5),
+    likes: [],
+    repostCount: 0,
+    media: [
+      {
+        type: "image",
+        url: "/preview.jpg?height=512&width=1024",
+      },
+    ],
+    author: {
+      username: "Jane Smith",
+      handle: "@janesmith",
+      avatar: "/placeholder.svg",
+    },
+    stats: {
+      likes: 128,
+      comments: 24,
+      shares: 16,
+      views: 320,
+    },
+  },
+  {
+    _id: "3",
+    authorId: "user3",
+    content: "Check out this cool video with subtitles!",
+    createdAt: getRelativeTimestamp(1),
+    isRepost: false,
+    updatedAt: getRelativeTimestamp(1),
+    likes: [],
+    repostCount: 0,
+    media: [
+      {
+        type: "video",
+        url: "/video.mp4",
+      },
+    ],
+    author: {
+      username: "Video Tester",
+      handle: "@videotester",
+      avatar: "/placeholder.svg",
+    },
+    stats: {
+      likes: 15,
+      comments: 3,
+      shares: 2,
+      views: 75,
+    },
+  },
+];
+
+export default function DashboardPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [selectedPost_Id, setSelectedPost_Id] = useState<string | null>(null);
+  const [posts, setPosts] = useState<Post[]>(initialPosts);
   const [isClient, setIsClient] = useState(false);
-  const [posts, setPosts] = useState<Post[]>([]);
 
-  // 2. useEffect的使用
   useEffect(() => {
     setIsClient(true);
-    // 获取首页帖子列表
-    const fetchPosts = async () => {
-      try {
-        const response = await PostService.getPosts();
-        if (response.code === 200 && response.data) {
-          setPosts(response.data.posts);
-        }
-      } catch (error) {
-        console.error("Failed to fetch posts:", error);
-      }
-    };
+    const post_Id = searchParams.get("post_Id");
+    if (post_Id) {
+      setSelectedPost_Id(post_Id);
+    }
+  }, [searchParams]);
 
-    fetchPosts();
-  }, []);
-
-  // 3. 事件处理函数
   const handlePostClick = (post: Post) => {
-    setSelectedPost(post);
+    setSelectedPost_Id(post._id);
+    router.push(`/dashboard?post_Id=${post._id}`);
   };
 
   const handleBackToList = () => {
-    setSelectedPost(null);
+    setSelectedPost_Id(null);
+    router.push("/dashboard");
   };
 
-  // 4. 渲染内容
-  const renderContent = () => {
-    if (!isClient) {
-      return <div>Loading...</div>;
-    }
+  if (!isClient) {
+    return null; // or a loading spinner
+  }
 
-    return (
-      <SidebarProvider>
-        <SidebarLeft />
-        <SidebarInset>
-          <header className='sticky top-0 z-10 flex h-14 shrink-0 items-center gap-2 border-b bg-background/95 backdrop-blur'>
-            <div className='flex flex-1 items-center gap-2 px-3'>
-              <SidebarTrigger />
-              <Separator orientation='vertical' className='mr-2 h-4' />
-              <Breadcrumb>
-                <BreadcrumbList>
-                  <BreadcrumbItem>
-                    <BreadcrumbPage className='line-clamp-1'>
-                      {selectedPost ? "帖子" : "首页"}
-                    </BreadcrumbPage>
-                  </BreadcrumbItem>
-                </BreadcrumbList>
-              </Breadcrumb>
-            </div>
-          </header>
+  const selectedPost = posts.find((post) => post._id === selectedPost_Id);
 
-          <div className='flex flex-1 flex-col gap-4 p-4'>
-            {selectedPost ? (
-              <PostDetails post={selectedPost} onBack={handleBackToList} />
-            ) : (
-              <>
-                <div className='mx-auto w-full max-w-3xl rounded-xl bg-card p-4'>
-                  <PostDialog />
-                </div>
-                <div className='mx-auto w-full max-w-3xl rounded-xl bg-background'>
-                  <PostList initialPosts={posts} onPostClick={handlePostClick} />
-                </div>
-              </>
-            )}
+  return (
+    <>
+      {selectedPost ? (
+        <PostDetails post={selectedPost} onBack={handleBackToList} />
+      ) : (
+        <>
+          <div className='mx-auto w-full max-w-3xl rounded-xl bg-card p-4'>
+            <PostDialog />
           </div>
-        </SidebarInset>
-        <SidebarRight />
-      </SidebarProvider>
-    );
-  };
-
-  // 5. 返回渲染结果
-  return renderContent();
+          <div className='mx-auto w-full max-w-3xl rounded-xl bg-background'>
+            <PostList initialPosts={posts} onPostClick={handlePostClick} />
+          </div>
+        </>
+      )}
+    </>
+  );
 }

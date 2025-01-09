@@ -8,6 +8,7 @@ import { Textarea } from "@/components/basic/textarea";
 import { Separator } from "@/components/basic/separator";
 import { VisuallyHidden } from "@/components/feedback/visually-hidden";
 import { Post } from "@/types/post";
+import { Comment } from "@/types/comment";
 
 function formatTime(timestamp: string): string {
   const date = new Date(timestamp);
@@ -25,14 +26,15 @@ interface ReplyDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   post: Post;
-  replyTo?: Post;
-  onReply: (content: string, replyToId: string | null) => void;
+  replyTo: Comment | null;
+  onReply: (content: string, replyToId: string) => void;
   currentUser?: {
     username: string;
+    handle: string;
     avatar: string;
   };
 }
-//包含回复帖子和回复评论的对话框
+
 export function ReplyDialog({
   open,
   onOpenChange,
@@ -41,6 +43,7 @@ export function ReplyDialog({
   onReply,
   currentUser = {
     username: "当前用户",
+    handle: "@currentuser",
     avatar: "/placeholder-avatar.jpg",
   },
 }: ReplyDialogProps) {
@@ -52,14 +55,11 @@ export function ReplyDialog({
 
   const handleReply = () => {
     if (content.trim() && !isOverLimit) {
-      onReply(content, replyTo?._id || null);
+      onReply(content, (replyTo?._id ?? post._id) || "");
       setContent("");
       onOpenChange(false);
     }
   };
-
-  const targetPost = replyTo || post;
-  const replyingToText = replyTo ? "回复评论" : "回复帖子";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -67,39 +67,57 @@ export function ReplyDialog({
         <DialogHeader className='text-xl font-semibold border-b pb-3'>
           <DialogTitle asChild>
             <VisuallyHidden>
-              {replyingToText} @{targetPost.author?.username}
+              回复给 {replyTo ? replyTo.author?.username : post.author?.username} (
+              {replyTo ? replyTo.author?.handle : post.author?.handle})
             </VisuallyHidden>
           </DialogTitle>
-          {replyingToText}
+          {replyTo ? "回复评论" : "回复帖子"}
         </DialogHeader>
         <div className='relative mt-4'>
           <div className='flex gap-4'>
             <div className='flex flex-col items-center gap-2'>
               <Avatar className='h-10 w-10'>
-                <AvatarImage src={targetPost.author?.avatar} />
-                <AvatarFallback>{targetPost.author?.username[0]}</AvatarFallback>
+                <AvatarImage src={replyTo ? replyTo.author?.avatar : post.author?.avatar} />
+                <AvatarFallback>
+                  {replyTo ? replyTo.author?.username : post.author?.username}
+                </AvatarFallback>
               </Avatar>
               <div className='w-0.5 flex-1 bg-border' />
             </div>
             <div className='flex-1 min-w-0'>
               <div className='flex items-center gap-2'>
-                <span className='font-semibold'>{targetPost.author?.username}</span>
-                <span className='text-muted-foreground'>{targetPost.author?.handle}</span>
+                <span className='font-semibold'>
+                  {replyTo ? replyTo.author?.username : post.author?.username}
+                </span>
+                <span className='text-muted-foreground'>
+                  {replyTo ? replyTo.author?.handle : post.author?.handle}
+                </span>
                 <span className='text-muted-foreground'>·</span>
                 <span className='text-muted-foreground'>
-                  {formatTime(targetPost.updatedAt)}
+                  {formatTime(replyTo ? replyTo.createdAt : post.createdAt)}
                 </span>
               </div>
-              <p className='mt-1 text-sm'>{targetPost.content}</p>
+              <p className='mt-1 text-sm'>{replyTo ? replyTo.content : post.content}</p>
               <p className='mt-4 text-muted-foreground text-sm'>
-                回复给 <span className='text-primary'>{targetPost.author?.handle}</span>
+                {replyTo ? (
+                  <>
+                    回复{" "}
+                    <span className='text-primary font-medium'>{replyTo.author?.handle}</span>{" "}
+                    的评论
+                  </>
+                ) : (
+                  <>
+                    回复 <span className='text-primary font-medium'>{post.author?.handle}</span>{" "}
+                    的帖子
+                  </>
+                )}
               </p>
             </div>
           </div>
           <div className='flex gap-4 mt-4'>
             <Avatar className='h-10 w-10'>
               <AvatarImage src={currentUser.avatar} />
-              <AvatarFallback>{currentUser.username[0]}</AvatarFallback>
+              <AvatarFallback>{currentUser.username}</AvatarFallback>
             </Avatar>
             <div className='flex-1'>
               <Textarea
