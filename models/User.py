@@ -60,6 +60,7 @@ class User(Document):
     
     # 非必填字段，但有默认值
     avatar: str = Field(default="", description="用户头像URL")
+    headerImage: str = Field(default="", description="用户头部图片URL")
     bio: str = Field(default="", description="用户简介")
     following: List[PydanticObjectId] = Field(default_factory=list)
     followers: List[PydanticObjectId] = Field(default_factory=list)
