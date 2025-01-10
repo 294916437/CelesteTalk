@@ -5,7 +5,7 @@ from fastapi import UploadFile
 import aiofiles
 
 UPLOAD_DIR = "static/uploads"
-ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/gif"}
+ALLOWED_IMAGE_TYPES = {"image/jpg", "image/jpeg", "image/png", "image/gif", "image/webp", "image/svg+xml", "image/bmp"}
 ALLOWED_VIDEO_TYPES = {"video/mp4"}
 
 async def save_upload_file(file: UploadFile, file_type: str) -> str:
