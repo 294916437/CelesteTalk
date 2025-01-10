@@ -69,7 +69,6 @@ function TimeDisplay({ timestamp }: { timestamp: string }) {
 export function PostList({ posts: initialPosts, ...props }: PostListProps) {
   // 使用内部状态管理帖子数据
   const [posts, setPosts] = React.useState(initialPosts);
-
   // 当外部 posts 更新时同步内部状态
   React.useEffect(() => {
     setPosts(initialPosts);
@@ -86,7 +85,7 @@ export function PostList({ posts: initialPosts, ...props }: PostListProps) {
     likedPosts,
     isLoading: isLikeLoading,
     toggleLike,
-  } = usePostLike(posts, props.currentUser?.handle, updatePostLikes);
+  } = usePostLike(posts, props.currentUser?.handle ?? "", updatePostLikes);
   const { bookmarkedPosts, toggleBookmark } = usePostInteraction();
   const { replyingTo, replyDialogOpen, setReplyDialogOpen, openReplyDialog, handleReply } =
     useReplyDialog();

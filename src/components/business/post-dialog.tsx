@@ -25,7 +25,7 @@ import { useCreatePost } from "@/hooks/post/useCreatePost";
 import { getImageUrl } from "@/utils/utils";
 import { Author } from "@/types/user";
 interface PostDialogProps {
-  currentUser?: Author; // 改为可选
+  currentUser?: Author;
   onPost?: (post: {
     content: string;
     media: { type: "image" | "video"; url: string }[];
@@ -75,7 +75,7 @@ export function PostDialog({ currentUser = defaultUser, onPost }: PostDialogProp
     if (!currentUser || content.trim() === "") return;
 
     const postData = {
-      _id: currentUser.handle,
+      _id: currentUser.handle, // 使用 _id 而不是 handle
       content: content,
     };
 

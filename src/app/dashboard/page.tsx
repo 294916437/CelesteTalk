@@ -40,6 +40,7 @@ export default function DashboardPage() {
   useEffect(() => {
     // 首次加载数据
     fetchPosts();
+
     // 设置定时刷新
     const intervalId = setInterval(() => {
       fetchPosts();

@@ -15,7 +15,6 @@ export function useUserPosts(userId: string) {
       setError(null);
       const response = await PostService.getUserPost(userId);
       if (response.code === 200) {
-        // 使用 response.data.posts 而不是 response.data
         setPosts(response.data.posts || []);
       } else {
         setError(response.message || "获取用户帖子失败");

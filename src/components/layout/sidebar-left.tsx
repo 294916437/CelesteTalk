@@ -16,7 +16,7 @@ const menuItems = [
   { icon: List, label: "列表", href: "/dashboard/lists" },
   { icon: User, label: "个人资料", href: "/dashboard/profile" },
   { icon: Users, label: "社区", href: "/dashboard/communities" },
-  { icon: Lock, label: "修改密码", href: "/dashboard/change-password" },
+  { icon: Lock, label: "修改密码", href: "/dashboard/password" },
 ];
 
 export function SidebarLeft() {
@@ -35,10 +35,20 @@ export function SidebarLeft() {
       <SidebarContent className='flex flex-col gap-4 p-4'>
         <Link
           href='/dashboard'
-          className='flex h-12 w-12 items-center justify-center rounded-full bg-primary text-primary-foreground hover:bg-primary/90'>
-          {/* Replace with your logo */}
-          <span className='sr-only'>Logo</span>
-          🐦
+          className='flex items-center gap-3 hover:opacity-80 transition-opacity duration-200'>
+          <div className='flex h-12 w-12 items-center justify-center overflow-hidden rounded-full'>
+            <div className='w-full h-full relative'>
+              <img
+                src='/logo.webp'
+                alt='Logo'
+                className='w-[170%] h-[170%] absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 object-cover'
+              />
+            </div>
+          </div>
+          <span className='text-lg font-semibold text-gray-700 dark:text-gray-300'>
+            CesleteTalk
+          </span>
+          <span className='sr-only'>CesleteTalk Logo</span>
         </Link>
         {menuItems.map((item) => (
           <Button

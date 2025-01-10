@@ -9,126 +9,12 @@ import { ProfileTabs } from "@/components/business/profile-tabs";
 import { Follow } from "@/components/business/follow";
 import { UserPosts } from "@/components/business/user-posts";
 import { PostDetails } from "@/components/business/post-details";
-
-// 静态用户数据
-const users = {
-  lanigiro514: {
-    name: "柳井户",
-    handle: "@lanigiro514",
-    avatar: "/placeholder.svg",
-    headerImage: "/placeholder.svg?height=200&width=600",
-    bio: "这里是柳井户的个人简介",
-    isVerified: true,
-    joinDate: "2024-01",
-    stats: {
-      following: 123,
-      followers: 456,
-    },
-  },
-  johndoe: {
-    name: "John Doe",
-    handle: "@johndoe",
-    avatar: "/placeholder.svg",
-    headerImage: "/placeholder.svg?height=200&width=600",
-    bio: "This is John Doe's bio",
-    isVerified: false,
-    joinDate: "2023-06",
-    stats: {
-      following: 789,
-      followers: 1011,
-    },
-  },
-  janesmith: {
-    name: "Jane Smith",
-    handle: "@janesmith",
-    avatar: "/placeholder.svg",
-    headerImage: "/placeholder.svg?height=200&width=600",
-    bio: "Jane Smith's profile description",
-    isVerified: true,
-    joinDate: "2023-12",
-    stats: {
-      following: 234,
-      followers: 567,
-    },
-  },
-};
-
-// 静态帖子数据
-const staticPosts: Post[] = [
-  {
-    _id: "1",
-    authorId: "lanigiro514",
-    content: "这是柳井户的第一条推文！",
-    createdAt: new Date(Date.now() - 3600000).toISOString(),
-    isRepost: false,
-    updatedAt: new Date(Date.now() - 3600000).toISOString(),
-    likes: [],
-    repostCount: 0,
-    author: {
-      username: "柳井户",
-      handle: "@lanigiro514",
-      avatar: "/placeholder.svg",
-    },
-    stats: {
-      likes: 10,
-      comments: 2,
-      shares: 1,
-      views: 100,
-    },
-  },
-  {
-    _id: "2",
-    authorId: "johndoe",
-    content: "Hello, Twitter clone!",
-    createdAt: new Date(Date.now() - 7200000).toISOString(),
-    isRepost: false,
-    updatedAt: new Date(Date.now() - 7200000).toISOString(),
-    likes: [],
-    repostCount: 0,
-    author: {
-      username: "John Doe",
-      handle: "@johndoe",
-      avatar: "/placeholder.svg",
-    },
-    stats: {
-      likes: 15,
-      comments: 3,
-      shares: 2,
-      views: 150,
-    },
-  },
-  {
-    _id: "3",
-    authorId: "janesmith",
-    content: "Just joined this amazing platform!",
-    createdAt: new Date(Date.now() - 10800000).toISOString(),
-    isRepost: false,
-    updatedAt: new Date(Date.now() - 10800000).toISOString(),
-    likes: [],
-    repostCount: 0,
-    author: {
-      username: "Jane Smith",
-      handle: "@janesmith",
-      avatar: "/placeholder.svg",
-    },
-    stats: {
-      likes: 20,
-      comments: 5,
-      shares: 3,
-      views: 200,
-    },
-  },
-];
-
-const currentUser = {
-  name: "柳井户",
-  handle: "@lanigiro514",
-  avatar: "/placeholder.svg",
-};
+import { useUserStore } from "@/store/user.store";
+// 获取用户数据
 
 export default function ProfilePage() {
   const params = useParams();
-  const handle = params.handle as string;
+  const user = useUserStore((state) => state.user);
   const searchParams = useSearchParams();
   const router = useRouter();
   const [activeTab, setActiveTab] = useState("posts");
@@ -136,7 +22,13 @@ export default function ProfilePage() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
 
-  useEffect(() => {}, [handle, router]);
+  const currentUser = user
+    ? {
+        name: user.username,
+        handle: user._id,
+        avatar: user.avatar,
+      }
+    : null;
 
   useEffect(() => {
     const postId = searchParams.get("postId");
@@ -146,19 +38,21 @@ export default function ProfilePage() {
   }, [searchParams]);
 
   const handleDeletePost = async (postId: string) => {
-    // 这里应该是一个API调用来删除帖子
-    setPosts(posts.filter((post) => post._id !== postId));
+    await setPosts(posts.filter((post) => post._id !== post._id));
   };
-
+  const handlePostClick = (post: Post) => {
+    setSelectedPostId(post._id);
+    router.push(`/dashboard/?postId=${post._id}`);
+  };
   const handleBackToProfile = () => {
     setSelectedPostId(null);
-    router.push(`/dashboard/profile/${handle}`);
+    router.push(`/dashboard/profile`);
   };
 
   const selectedPost = posts.find((post) => post._id === selectedPostId);
 
   if (!profile) {
-    return <div>Loading...</div>; // 或者一个更好的加载指示器
+    return <div>Loading...</div>;
   }
 
   return (
@@ -173,6 +67,7 @@ export default function ProfilePage() {
             {activeTab === "posts" ? (
               <UserPosts
                 posts={posts}
+                onPostClick={handlePostClick}
                 onDeletePost={handleDeletePost}
                 setPosts={setPosts}
                 currentUser={currentUser}

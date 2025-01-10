@@ -66,9 +66,9 @@ export function EditProfile({ profile, onSave }: EditProfileProps) {
       const response = await MediaService.uploadMedia(file, uploadData);
       if (response.code === 200 && response.data) {
         const imageUrl = getImageUrl(response.data.url);
-
         // 更新预览和store中的用户数据
         if (type === "avatar") {
+          toast.success("更新头像成功");
           setAvatarPreview(imageUrl);
           setUser({
             ...user,
@@ -76,6 +76,7 @@ export function EditProfile({ profile, onSave }: EditProfileProps) {
           });
           onSave({ ...profile, avatar: response.data.url });
         } else if (type === "header") {
+          toast.success("更新封面成功");
           setHeaderPreview(imageUrl);
           setUser({
             ...user,
@@ -84,16 +85,12 @@ export function EditProfile({ profile, onSave }: EditProfileProps) {
           onSave({ ...profile, headerImage: response.data.url });
         }
 
-        toast.success(`${type === "avatar" ? "头像" : "封面"}更新成功`);
-
         // 刷新页面以获取新图片
         router.refresh();
       } else {
         throw new Error("上传失败");
       }
-    } catch (error) {
-      toast.error(`${type === "avatar" ? "头像" : "封面"}上传失败`);
-    }
+    } catch (error) {}
   };
 
   const handleFileChange = async (
@@ -114,7 +111,7 @@ export function EditProfile({ profile, onSave }: EditProfileProps) {
       if (type === "avatar") {
         setAvatarPreview(reader.result as string);
         setAvatarFile(file);
-      } else {
+      } else if (type === "header") {
         setHeaderPreview(reader.result as string);
         setHeaderFile(file);
       }
@@ -129,7 +126,7 @@ export function EditProfile({ profile, onSave }: EditProfileProps) {
     try {
       setIsLoading(true);
       // 只更新基本信息
-      await onSave({
+      onSave({
         name,
         bio,
       });

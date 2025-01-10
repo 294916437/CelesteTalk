@@ -46,7 +46,7 @@ interface UserPostsProps {
   onDeletePost: (postId: string) => void;
   setPosts: React.Dispatch<React.SetStateAction<Post[]>>;
   currentUser: Author | null;
-  onRefresh?: () => void; // 添加刷新方法
+  onRefresh?: () => void;
 }
 
 export function UserPosts({
@@ -195,7 +195,6 @@ export function UserPosts({
                       <span className='font-semibold transition-colors'>
                         {post.author.username}
                       </span>
-                      <span className='text-muted-foreground'>{post.author.handle}</span>
                     </Link>
                     <span className='text-muted-foreground'>·</span>
                     <span className='text-muted-foreground hover:underline cursor-pointer transition-colors'>
