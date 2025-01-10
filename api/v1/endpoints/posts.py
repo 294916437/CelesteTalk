@@ -7,6 +7,7 @@ from math import exp
 
 from models.Post import Post, Media
 from models.Comment import Comment
+from models.User import User
 import logging
 from pydantic import ValidationError
 from middleware.response import CommonResponse
@@ -103,10 +104,26 @@ async def create_post(
         # 保存到数据库
         await new_post.create()
         
+        # 获取作者信息
+        author = await User.get(PydanticObjectId(post_data["authorId"]))
+        
+        post_data = jsonable_encoder(new_post)
+        post_data["author"] = {
+            "username": author.username,
+            "handle": "@"+author.username,
+            "avatar": author.avatar
+        }
+        post_data["stats"] = {
+            "likes": 0,
+            "comments": 0,
+            "shares": 0,
+            "views": 0
+        }
+        
         return CommonResponse(
             code=200,
             msg="success",
-            data={"post": jsonable_encoder(new_post)}
+            data={"post": post_data}
         )
         
     except json.JSONDecodeError:
@@ -126,8 +143,30 @@ async def get_post(postId: str):
         post = await Post.get(post_id)
         if not post:
             raise HTTPException(status_code=404, detail="Post not found")
-        return CommonResponse(code=200, msg="success", data={"post": post})
-    except Exception:
+        
+        # 获取作者信息
+        author = await User.get(post.authorId)
+        
+        # 获取评论数
+        comments_count = await Comment.find(Comment.postId == post_id).count()
+        
+        # 构建返回数据
+        post_data = jsonable_encoder(post)
+        post_data["author"] = {
+            "username": author.username if author else None,
+            "handle": "@" + author.username if author else None,
+            "avatar": author.avatar if author else None
+        }
+        post_data["stats"] = {
+            "likes": len(post.likes),
+            "comments": comments_count,
+            "shares": post.repostCount,
+            "views": 0
+        }
+        
+        return CommonResponse(code=200, msg="success", data={"post": post_data})
+    except Exception as e:
+        logger.error(f"Error getting post {postId}: {str(e)}")
         raise HTTPException(status_code=400, detail="Invalid post ID format")
 
 
@@ -165,15 +204,38 @@ async def toggle_like(postId: str, repost_data: dict):
             raise HTTPException(status_code=404, detail="Post not found")
 
         if user_id in post.likes:
-            return CommonResponse(code=401,msg="You have already liked this post",data={"post": post})
+            return CommonResponse(code=401, msg="You have already liked this post", data={"post": post})
         else:
             post.likes.append(user_id)
 
         post.updatedAt = format_datetime_now()
         await post.save()
-        return CommonResponse(code=200, msg="success", data={"post": post})
-    except Exception:
+
+        # 获取作者信息
+        author = await User.get(post.authorId)
+
+        # 获取评论数
+        comments_count = await Comment.find(Comment.postId == post_id).count()
+
+        # 构建返回数据
+        post_data = jsonable_encoder(post)
+        post_data["author"] = {
+            "username": author.username if author else None,
+            "handle": "@" + author.username if author else None,
+            "avatar": author.avatar if author else None
+        }
+        post_data["stats"] = {
+            "likes": len(post.likes),
+            "comments": comments_count,
+            "shares": post.repostCount,
+            "views": 0
+        }
+
+        return CommonResponse(code=200, msg="success", data={"post": post_data})
+    except Exception as e:
+        logger.error(f"Error toggling like for post {postId}: {str(e)}")
         raise HTTPException(status_code=400, detail="Invalid ID format")
+    
     
 @router.delete("/{postId}/like", response_description="取消点赞")
 async def toggle_like(postId: str, repost_data: dict):
@@ -191,8 +253,30 @@ async def toggle_like(postId: str, repost_data: dict):
 
         post.updatedAt = format_datetime_now()
         await post.save()
-        return CommonResponse(code=200, msg="success", data={"post": post})
-    except Exception:
+
+        # 获取作者信息
+        author = await User.get(post.authorId)
+
+        # 获取评论数
+        comments_count = await Comment.find(Comment.postId == post_id).count()
+
+        # 构建返回数据
+        post_data = jsonable_encoder(post)
+        post_data["author"] = {
+            "username": author.username if author else None,
+            "handle": "@" + author.username if author else None,
+            "avatar": author.avatar if author else None
+        }
+        post_data["stats"] = {
+            "likes": len(post.likes),
+            "comments": comments_count,
+            "shares": post.repostCount,
+            "views": 0
+        }
+
+        return CommonResponse(code=200, msg="success", data={"post": post_data})
+    except Exception as e:
+        logger.error(f"Error toggling like for post {postId}: {str(e)}")
         raise HTTPException(status_code=400, detail="Invalid ID format")
     
     
@@ -213,19 +297,40 @@ async def repost_post(
             authorId=PydanticObjectId(repost_data["authorId"]),
             content=repost_data["content"],
             isRepost=True,
-            originalPost=original_post_id
+            originalPost=original_post_id,
+            createdAt=format_datetime_now(),
+            updatedAt=format_datetime_now()
         )
         await repost.insert()
 
-        # 更新原帖的转发计数（修改这部分）
+        # 更新原帖的转发计数
         original_post.repostCount += 1
         original_post.updatedAt = format_datetime_now()
         await original_post.save()
 
+        # 获取作者信息
+        author = await User.get(PydanticObjectId(repost_data["authorId"]))
+        if not author:
+            raise HTTPException(status_code=404, detail="Author not found")
+
+        # 构建返回数据
+        repost_data = jsonable_encoder(repost)
+        repost_data["author"] = {
+            "username": author.username,
+            "handle": "@" + author.username,
+            "avatar": author.avatar
+        }
+        repost_data["stats"] = {
+            "likes": 0,
+            "comments": 0,
+            "shares": 0,
+            "views": 0
+        }
+
         return CommonResponse(
             code=200,
             msg="Repost created successfully",
-            data={"post": repost}
+            data={"post": repost_data}
         )
     except Exception as e:
         logger.error(f"Error in repost_post: {str(e)}")
@@ -243,12 +348,39 @@ async def get_user_posts(userId: str):
             Post.authorId == user_id
         ).sort(-Post.createdAt).to_list()
         
+        # 获取用户信息
+        user = await User.get(user_id)
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        # 获取评论数
+        comments_counts = await Comment.find(
+            {"postId": {"$in": [post.id for post in posts]}}
+        ).count()
+        
+        # 构建返回数据
+        posts_with_authors = []
+        for post in posts:
+            post_data = jsonable_encoder(post)
+            post_data["author"] = {
+                "username": user.username,
+                "handle": "@" + user.username,
+                "avatar": user.avatar
+            }
+            post_data["stats"] = {
+                "likes": len(post.likes),
+                "comments": comments_counts,
+                "shares": post.repostCount,
+                "views": 0
+            }
+            posts_with_authors.append(post_data)
+        
         return CommonResponse(
             code=200,
             msg="success",
             data={
-                "posts": jsonable_encoder(posts),
-                "total": len(posts)
+                "posts": posts_with_authors,
+                "total": len(posts_with_authors)
             }
         )
     except ValidationError as ve:
@@ -261,7 +393,6 @@ async def get_user_posts(userId: str):
 
 @router.get("/likes/{userId}", response_description="获取用户点赞的帖子")
 async def get_user_likes(userId: str):
-    
     try:
         # 验证用户 ID 格式
         user_id = PydanticObjectId(userId)
@@ -271,12 +402,41 @@ async def get_user_likes(userId: str):
             {"likes": {"$in": [user_id]}}
         ).sort(-Post.createdAt).to_list()
         
+        # 获取所有作者 ID
+        author_ids = [post.authorId for post in liked_posts]
+        
+        # 查询所有作者信息
+        authors = await User.find(
+            {"_id": {"$in": author_ids}}
+        ).to_list()
+        
+        # 创建作者字典
+        author_dict = {str(author.id): author for author in authors}
+        
+        # 为每个帖子添加作者信息
+        posts_with_authors = []
+        for post in liked_posts:
+            post_data = jsonable_encoder(post)
+            author = author_dict.get(str(post.authorId))
+            post_data["author"] = {
+                "username": author.username if author else None,
+                "handle": "@" + author.username if author else None,
+                "avatar": author.avatar if author else None
+            }
+            post_data["stats"] = {
+                "likes": len(post.likes),
+                "comments": await Comment.find(Comment.postId == post.id).count(),
+                "shares": post.repostCount,
+                "views": 0
+            }
+            posts_with_authors.append(post_data)
+        
         return CommonResponse(
             code=200,
             msg="success",
             data={
-                "posts": jsonable_encoder(liked_posts),
-                "total": len(liked_posts)
+                "posts": posts_with_authors,
+                "total": len(posts_with_authors)
             }
         )
     except ValidationError as ve:
@@ -306,21 +466,21 @@ async def get_home_posts():
                 }
             )
 
+        # 获取所有作者 ID
+        author_ids = [post.authorId for post in posts]
+        
+        # 查询所有作者信息
+        authors = await User.find(
+            {"_id": {"$in": author_ids}}
+        ).to_list()
+        
+        # 创建作者字典
+        author_dict = {str(author.id): author for author in authors}
+
         # 为返回的帖子计算热度分数
         now = format_datetime_now()
         scored_posts = []
         
-        # 计算热度：
-        # likes_count：计算帖子的点赞数。如果post.likes存在，则计算其长度，否则为0。
-        # repost_count：获取帖子的转发数。如果post.repostCount存在，则使用其值，否则为0。
-        # heat_score：根据公式计算热度分数，公式为：点赞数 + (转发数 * 2)。
-        # 时间转换：
-        # post_time：将帖子的创建时间从UTC时间转换为东八区时间（北京时间）。
-        # 计算时间差：
-        # time_diff：计算当前时间与帖子创建时间的差值（以小时为单位）。
-        # time_decay：根据时间差计算时间衰减系数，使用指数衰减公式，衰减周期为3天（72小时）。
-        # 计算最终分数：
-        # final_score：将热度分数乘以时间衰减系数，得到最终的热度分数。
         for post in posts:
             try:
                 # 计算帖子热度
@@ -355,12 +515,42 @@ async def get_home_posts():
             reverse=True
         )
         
+        # 为每个帖子添加作者信息
+        posts_with_authors = []
+        for item in sorted_posts:
+            post = item['post']
+            author = author_dict.get(str(post.authorId))
+            post_data = {
+                "_id": str(post.id),
+                "authorId": str(post.authorId),
+                "content": post.content,
+                "createdAt": post.createdAt.isoformat(),
+                "isRepost": post.isRepost,
+                "media": [{"type": media.type, "url": media.url} for media in post.media] if post.media else [],
+                "likes": [str(like) for like in post.likes],
+                "repostCount": post.repostCount,
+                "replyTo": str(post.replyTo) if post.replyTo else None,
+                "updatedAt": post.updatedAt.isoformat(),
+                "author": {
+                    "username": author.username if author else None,
+                    "handle": "@" + author.username if author else None,
+                    "avatar": author.avatar if author else None
+                },
+                "stats": {
+                    "likes": len(post.likes),
+                    "comments": await Comment.find(Comment.postId == post.id).count(),
+                    "shares": post.repostCount,
+                    "views": 0
+                }
+            }
+            posts_with_authors.append(post_data)
+        
         return CommonResponse(
             code=200,
             msg="success",
             data={
-                "posts": jsonable_encoder([item['post'] for item in sorted_posts]),
-                "total": len(sorted_posts)
+                "posts": posts_with_authors,
+                "total": len(posts_with_authors)
             }
         )
         
@@ -372,20 +562,61 @@ async def get_home_posts():
         )
 
 
-@router.get("/search", response_description="搜索帖子")
+@router.get("/search/", response_description="搜索帖子")
 async def search_posts(kw: str):
     try:
+        Kw = PydanticObjectId(kw)
         # 使用正则表达式进行模糊搜索
         posts = await Post.find(
-            {"content": {"$regex": kw, "$options": "i"}}
+            {"content": {"$regex": Kw, "$options": "i"}}
         ).sort(-Post.createdAt).to_list()
+        
+        # 获取所有作者 ID
+        author_ids = [post.authorId for post in posts]
+        
+        # 查询所有作者信息
+        authors = await User.find(
+            {"_id": {"$in": author_ids}}
+        ).to_list()
+        
+        # 创建作者字典
+        author_dict = {str(author.id): author for author in authors}
+        
+        # 为每个帖子添加作者信息
+        posts_with_authors = []
+        for post in posts:
+            author = author_dict.get(str(post.authorId))
+            post_data = {
+                "_id": str(post.id),
+                "authorId": str(post.authorId),
+                "content": post.content,
+                "createdAt": post.createdAt.isoformat(),
+                "isRepost": post.isRepost,
+                "media": [{"type": media.type, "url": media.url} for media in post.media] if post.media else [],
+                "likes": [str(like) for like in post.likes],
+                "repostCount": post.repostCount,
+                "replyTo": str(post.replyTo) if post.replyTo else None,
+                "updatedAt": post.updatedAt.isoformat(),
+                "author": {
+                    "username": author.username if author else None,
+                    "handle": "@" + author.username if author else None,
+                    "avatar": author.avatar if author else None
+                },
+                "stats": {
+                    "likes": len(post.likes),
+                    "comments": await Comment.find(Comment.postId == post.id).count(),
+                    "shares": post.repostCount,
+                    "views": 0
+                }
+            }
+            posts_with_authors.append(post_data)
         
         return CommonResponse(
             code=200,
             msg="success",
             data={
-                "posts": jsonable_encoder(posts),
-                "total": len(posts)
+                "posts": posts_with_authors,
+                "total": len(posts_with_authors)
             }
         )
     except Exception as e:
@@ -400,7 +631,36 @@ async def get_post_comments(postId: str):
         comments = await Comment.find(
             Comment.postId == post_id
         ).sort(+Comment.createdAt).to_list()
-        return CommonResponse(code=200, msg="success", data={"comments": comments})
+
+        # 获取所有作者 ID
+        author_ids = [comment.authorId for comment in comments]
+
+        # 查询所有作者信息
+        authors = await User.find(
+            {"_id": {"$in": author_ids}}
+        ).to_list()
+
+        # 创建作者字典
+        author_dict = {str(author.id): author for author in authors}
+
+        # 为每个评论添加作者信息和统计信息
+        comments_with_authors = []
+        for comment in comments:
+            author = author_dict.get(str(comment.authorId))
+            comment_data = jsonable_encoder(comment)
+            comment_data["author"] = {
+                "username": author.username if author else None,
+                "handle": "@" + author.username if author else None,
+                "avatar": author.avatar if author else None
+            }
+            comment_data["stats"] = {
+                "likes": len(comment.likes) if comment.likes else 0,
+                "replies": 0,
+                "shares": 0 
+            }
+            comments_with_authors.append(comment_data)
+
+        return CommonResponse(code=200, msg="success", data={"comments": comments_with_authors})
     except Exception as e:
         logger.error(f"Error getting comments for post {post_id}: {str(e)}")
         raise HTTPException(status_code=400, detail="Invalid post ID format")
@@ -416,10 +676,32 @@ async def create_comment(postId: str, data: dict):
         new_comment = Comment(
             postId=post_id,
             authorId=author_id,
-            content=content
+            content=content,
+            createdAt=format_datetime_now(),
+            updatedAt=format_datetime_now(),
+            likes=[],
+            replyTo=None
         )
         await new_comment.insert()
-        return CommonResponse(code=200, msg="success", data={"comment": new_comment})
+
+        # 获取作者信息
+        author = await User.get(author_id)
+        if not author:
+            raise HTTPException(status_code=404, detail="Author not found")
+
+        comment_data = jsonable_encoder(new_comment)
+        comment_data["author"] = {
+            "username": author.username,
+            "handle": "@" + author.username,
+            "avatar": author.avatar
+        }
+        comment_data["stats"] = {
+            "likes": 0,
+            "replies": 0,
+            "shares": 0
+        }
+
+        return CommonResponse(code=200, msg="success", data={"comment": comment_data})
     except Exception as e:
         logger.error(f"Error creating comment: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
