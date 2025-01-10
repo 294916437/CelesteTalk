@@ -75,7 +75,7 @@ export function PostDialog({ currentUser = defaultUser, onPost }: PostDialogProp
     if (!currentUser || content.trim() === "") return;
 
     const postData = {
-      _id: currentUser.handle, // 使用 _id 而不是 handle
+      _id: currentUser.handle,
       content: content,
     };
 

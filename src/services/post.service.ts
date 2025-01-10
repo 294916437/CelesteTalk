@@ -1,10 +1,10 @@
 import { HttpClient } from "@/utils/fetch";
-import { Post, CreatePostData } from "@/types/post";
+import { CreatePostData } from "@/types/post";
 import { ApiResponse } from "@/types/api";
 
 export class PostService {
   static async getHomePosts(): Promise<ApiResponse> {
-    return HttpClient.get("/posts/home");
+    return HttpClient.get("/posts/home/");
   }
 
   static async getPost(id: string): Promise<ApiResponse> {
@@ -27,15 +27,25 @@ export class PostService {
     return HttpClient.upload("/posts", formData);
   }
 
-  static async likePost(id: string): Promise<ApiResponse> {
-    return HttpClient.put(`/posts/${id}/like`);
+  static async likePost(id: string, _id: string): Promise<ApiResponse> {
+    return HttpClient.put(`/posts/${id}/like`, { data: { _id } });
   }
-  static async unlike(id: string): Promise<ApiResponse> {
-    return HttpClient.delete(`/posts/${id}/like`);
+  static async unlikePost(id: string, _id: string): Promise<ApiResponse> {
+    return HttpClient.delete(`/posts/${id}/like`, { data: { _id } });
   }
   static async repost(id: string, content: string): Promise<ApiResponse> {
     return HttpClient.post(`/posts/${id}/repost`, {
       data: { content },
     });
+  }
+  static async getPostComments(id: string): Promise<ApiResponse> {
+    return HttpClient.get(`/posts/${id}/comments`);
+  }
+  static async createPostComment(
+    postId: string,
+    _id: string,
+    content: string
+  ): Promise<ApiResponse> {
+    return HttpClient.post(`/posts/${postId}/comment`, { data: { _id, content } });
   }
 }

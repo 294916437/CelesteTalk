@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Profile } from "@/types/profile";
 import { ProfileHeader } from "@/components/business/profile-header";
 import { ProfileTabs } from "@/components/business/profile-tabs";
@@ -9,11 +9,14 @@ import { Follow } from "@/components/business/follow";
 import { UserPosts } from "@/components/business/user-posts";
 import { PostDetails } from "@/components/business/post-details";
 import { useUserStore } from "@/store/user.store";
-
+import { Post } from "@/types/post";
 import { useUserPosts } from "@/hooks/post/useUserPost";
 
 export default function ProfilePage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState("posts");
+  const [selectedPost_Id, setSelectedPost_Id] = useState<string | null>(null);
   // 获取用户数据
   const user = useUserStore((state) => state.user);
 
@@ -46,7 +49,16 @@ export default function ProfilePage() {
         avatar: user.avatar,
       }
     : null;
-
+  useEffect(() => {
+    const post_Id = searchParams.get("post_Id");
+    if (post_Id) {
+      setSelectedPost_Id(post_Id);
+    }
+  }, [searchParams]);
+  const handlePostClick = (post: Post) => {
+    setSelectedPost_Id(post._id);
+    router.push(`/dashboard?post_Id=${post._id}`);
+  };
   const handleDeletePost = async (postId: string) => {
     await deleteUserPost(postId);
   };
@@ -66,6 +78,7 @@ export default function ProfilePage() {
               posts={posts}
               isLoading={isLoading}
               error={error}
+              onPostClick={handlePostClick}
               onDeletePost={handleDeletePost}
               setPosts={setPosts}
               currentUser={currentUser}

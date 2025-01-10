@@ -6,7 +6,8 @@ import { Button } from "@/components/basic/button";
 import { PostDialog } from "@/components/business/post-dialog";
 import { Sidebar, SidebarContent, SidebarFooter } from "@/components/layout/sidebar";
 import { Home, User, Bell, Mail, Bookmark, List, Users, Lock } from "lucide-react";
-
+import { useUserStore } from "@/store/user.store";
+import { usePosts } from "@/hooks/post/usePosts";
 const menuItems = [
   { icon: Home, label: "首页", href: "/dashboard" },
   { icon: Bell, label: "通知", href: "/dashboard/notifications" },
@@ -20,7 +21,15 @@ const menuItems = [
 
 export function SidebarLeft() {
   const pathname = usePathname();
-
+  const user = useUserStore((state) => state.user);
+  const { fetchPosts } = usePosts();
+  const currentUser = user
+    ? {
+        name: user.username,
+        handle: user._id,
+        avatar: user.avatar,
+      }
+    : null;
   return (
     <Sidebar side='left' className='border-r'>
       <SidebarContent className='flex flex-col gap-4 p-4'>
@@ -43,7 +52,16 @@ export function SidebarLeft() {
             </Link>
           </Button>
         ))}
-        <PostDialog />
+        {currentUser && (
+          <div className='mx-auto w-full max-w-3xl rounded-xl bg-card p-4'>
+            <PostDialog
+              currentUser={currentUser}
+              onPost={() => {
+                fetchPosts();
+              }}
+            />
+          </div>
+        )}
       </SidebarContent>
       <SidebarFooter>{/* Add footer content here */}</SidebarFooter>
     </Sidebar>

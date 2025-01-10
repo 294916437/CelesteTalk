@@ -42,6 +42,7 @@ interface UserPostsProps {
   posts: Post[];
   isLoading?: boolean;
   error?: string | null;
+  onPostClick: (post: Post) => void;
   onDeletePost: (postId: string) => void;
   setPosts: React.Dispatch<React.SetStateAction<Post[]>>;
   currentUser: Author | null;
@@ -52,6 +53,7 @@ export function UserPosts({
   posts,
   isLoading,
   onDeletePost,
+  onPostClick,
   setPosts,
   currentUser,
   onRefresh,
@@ -102,7 +104,7 @@ export function UserPosts({
 
   const handleDelete = async (postId: string) => {
     try {
-      await onDeletePost(postId);
+      onDeletePost(postId);
       toast.success("帖子已删除");
       onRefresh?.(); // 调用刷新方法
     } catch (error) {
