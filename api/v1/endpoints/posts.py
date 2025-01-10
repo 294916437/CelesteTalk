@@ -31,8 +31,8 @@ router = APIRouter()
                             "data": {
                                 "type": "string",
                                 "example": json.dumps({
-                                    "authorId": "507f1f77bcf86cd799439011",
-                                    "content": "这是一条测试帖子"
+                                    "_id": "67806d53fba4dcfd9145d045",
+                                    "content": "测试帖子233"
                                 })
                             },
                             "files": {
@@ -58,7 +58,7 @@ async def create_post(
         post_data = json.loads(data)
         
         # 验证必要的请求数据
-        if not post_data.get("authorId") or not post_data.get("content"):
+        if not post_data.get("_id") or not post_data.get("content"):
             raise HTTPException(
                 status_code=400, 
                 detail="Missing required fields: authorId or content"
@@ -89,7 +89,7 @@ async def create_post(
         
         # 创建新帖子
         new_post = Post(
-            authorId=PydanticObjectId(post_data["authorId"]),
+            authorId=PydanticObjectId(post_data["_id"]),
             content=post_data["content"],
             media=media_list,
             isRepost=False,
@@ -105,12 +105,12 @@ async def create_post(
         await new_post.create()
         
         # 获取作者信息
-        author = await User.get(PydanticObjectId(post_data["authorId"]))
+        author = await User.get(PydanticObjectId(post_data["_id"]))
         
         post_data = jsonable_encoder(new_post)
         post_data["author"] = {
             "username": author.username,
-            "handle": "@"+author.username,
+            "handle": post_data["_id"],
             "avatar": author.avatar
         }
         post_data["stats"] = {
@@ -153,9 +153,9 @@ async def get_post(postId: str):
         # 构建返回数据
         post_data = jsonable_encoder(post)
         post_data["author"] = {
-            "username": author.username if author else None,
-            "handle": "@" + author.username if author else None,
-            "avatar": author.avatar if author else None
+            "username": author.username,
+            "handle": str(post.authorId),
+            "avatar": author.avatar
         }
         post_data["stats"] = {
             "likes": len(post.likes),
@@ -171,10 +171,10 @@ async def get_post(postId: str):
 
 
 @router.delete("/{postId}", response_description="删除帖子")
-async def delete_post(postId: str, repost_data: dict):
+async def delete_post(postId: str, data: dict):
     try:
         post_id = PydanticObjectId(postId)
-        curr_user = PydanticObjectId(repost_data["userId"])
+        curr_user = PydanticObjectId(data["_id"])
         post = await Post.get(post_id)
         if not post:
             raise HTTPException(status_code=404, detail="Post not found")
@@ -195,10 +195,10 @@ async def delete_post(postId: str, repost_data: dict):
 
 
 @router.put("/{postId}/like", response_description="点赞帖子")
-async def toggle_like(postId: str, repost_data: dict):
+async def toggle_like(postId: str, data: dict):
     try:
         post_id = PydanticObjectId(postId)
-        user_id = PydanticObjectId(repost_data["userId"])
+        user_id = PydanticObjectId(data["_id"])
         post = await Post.get(post_id)
         if not post:
             raise HTTPException(status_code=404, detail="Post not found")
@@ -220,9 +220,9 @@ async def toggle_like(postId: str, repost_data: dict):
         # 构建返回数据
         post_data = jsonable_encoder(post)
         post_data["author"] = {
-            "username": author.username if author else None,
-            "handle": "@" + author.username if author else None,
-            "avatar": author.avatar if author else None
+            "username": author.username,
+            "handle": str(post.authorId),
+            "avatar": author.avatar
         }
         post_data["stats"] = {
             "likes": len(post.likes),
@@ -238,10 +238,10 @@ async def toggle_like(postId: str, repost_data: dict):
     
     
 @router.delete("/{postId}/like", response_description="取消点赞")
-async def toggle_like(postId: str, repost_data: dict):
+async def toggle_like(postId: str, data: dict):
     try:
         post_id = PydanticObjectId(postId)
-        user_id = PydanticObjectId(repost_data["userId"])
+        user_id = PydanticObjectId(data["_id"])
         post = await Post.get(post_id)
         if not post:
             raise HTTPException(status_code=404, detail="Post not found")
@@ -263,9 +263,9 @@ async def toggle_like(postId: str, repost_data: dict):
         # 构建返回数据
         post_data = jsonable_encoder(post)
         post_data["author"] = {
-            "username": author.username if author else None,
-            "handle": "@" + author.username if author else None,
-            "avatar": author.avatar if author else None
+            "username": author.username,
+            "handle": str(post.authorId),
+            "avatar": author.avatar
         }
         post_data["stats"] = {
             "likes": len(post.likes),
@@ -283,7 +283,7 @@ async def toggle_like(postId: str, repost_data: dict):
 @router.post("/{postId}/repost", response_description="发布转发帖子")
 async def repost_post(
     postId: str,
-    repost_data: dict
+    data: dict
 ):
     try:
         # 验证并获取原帖
@@ -294,8 +294,8 @@ async def repost_post(
 
         # 创建转发帖子
         repost = Post(
-            authorId=PydanticObjectId(repost_data["authorId"]),
-            content=repost_data["content"],
+            authorId=PydanticObjectId(data["_id"]),
+            content=data["content"],
             isRepost=True,
             originalPost=original_post_id,
             createdAt=format_datetime_now(),
@@ -309,7 +309,7 @@ async def repost_post(
         await original_post.save()
 
         # 获取作者信息
-        author = await User.get(PydanticObjectId(repost_data["authorId"]))
+        author = await User.get(PydanticObjectId(data["_id"]))
         if not author:
             raise HTTPException(status_code=404, detail="Author not found")
 
@@ -317,7 +317,7 @@ async def repost_post(
         repost_data = jsonable_encoder(repost)
         repost_data["author"] = {
             "username": author.username,
-            "handle": "@" + author.username,
+            "handle": data["_id"],
             "avatar": author.avatar
         }
         repost_data["stats"] = {
@@ -364,7 +364,7 @@ async def get_user_posts(userId: str):
             post_data = jsonable_encoder(post)
             post_data["author"] = {
                 "username": user.username,
-                "handle": "@" + user.username,
+                "handle": userId,
                 "avatar": user.avatar
             }
             post_data["stats"] = {
@@ -379,8 +379,7 @@ async def get_user_posts(userId: str):
             code=200,
             msg="success",
             data={
-                "posts": posts_with_authors,
-                "total": len(posts_with_authors)
+                "posts": posts_with_authors
             }
         )
     except ValidationError as ve:
@@ -420,7 +419,7 @@ async def get_user_likes(userId: str):
             author = author_dict.get(str(post.authorId))
             post_data["author"] = {
                 "username": author.username if author else None,
-                "handle": "@" + author.username if author else None,
+                "handle": str(post.authorId),
                 "avatar": author.avatar if author else None
             }
             post_data["stats"] = {
@@ -435,8 +434,7 @@ async def get_user_likes(userId: str):
             code=200,
             msg="success",
             data={
-                "posts": posts_with_authors,
-                "total": len(posts_with_authors)
+                "posts": posts_with_authors
             }
         )
     except ValidationError as ve:
@@ -461,8 +459,7 @@ async def get_home_posts():
                 code=200,
                 msg="success",
                 data={
-                    "posts": [],
-                    "total": 0
+                    "posts": []
                 }
             )
 
@@ -533,7 +530,7 @@ async def get_home_posts():
                 "updatedAt": post.updatedAt.isoformat(),
                 "author": {
                     "username": author.username if author else None,
-                    "handle": "@" + author.username if author else None,
+                    "handle": str(post.authorId),
                     "avatar": author.avatar if author else None
                 },
                 "stats": {
@@ -549,8 +546,7 @@ async def get_home_posts():
             code=200,
             msg="success",
             data={
-                "posts": posts_with_authors,
-                "total": len(posts_with_authors)
+                "posts": posts_with_authors
             }
         )
         
@@ -562,13 +558,12 @@ async def get_home_posts():
         )
 
 
-@router.get("/search/", response_description="搜索帖子")
-async def search_posts(kw: str):
+@router.post("/search", response_description="搜索帖子")
+async def search_posts(data: dict):
     try:
-        Kw = PydanticObjectId(kw)
         # 使用正则表达式进行模糊搜索
         posts = await Post.find(
-            {"content": {"$regex": Kw, "$options": "i"}}
+            {"content": {"$regex": data["kw"], "$options": "i"}}
         ).sort(-Post.createdAt).to_list()
         
         # 获取所有作者 ID
@@ -599,7 +594,7 @@ async def search_posts(kw: str):
                 "updatedAt": post.updatedAt.isoformat(),
                 "author": {
                     "username": author.username if author else None,
-                    "handle": "@" + author.username if author else None,
+                    "handle": str(post.authorId),
                     "avatar": author.avatar if author else None
                 },
                 "stats": {
@@ -615,8 +610,7 @@ async def search_posts(kw: str):
             code=200,
             msg="success",
             data={
-                "posts": posts_with_authors,
-                "total": len(posts_with_authors)
+                "posts": posts_with_authors
             }
         )
     except Exception as e:
@@ -649,9 +643,9 @@ async def get_post_comments(postId: str):
             author = author_dict.get(str(comment.authorId))
             comment_data = jsonable_encoder(comment)
             comment_data["author"] = {
-                "username": author.username if author else None,
-                "handle": "@" + author.username if author else None,
-                "avatar": author.avatar if author else None
+                "username": author.username,
+                "handle": str(comment.authorId),
+                "avatar": author.avatar
             }
             comment_data["stats"] = {
                 "likes": len(comment.likes) if comment.likes else 0,
@@ -669,7 +663,7 @@ async def get_post_comments(postId: str):
 @router.post("/{postId}/comment", response_description="发表评论")
 async def create_comment(postId: str, data: dict):
     content = data.get("content")
-    author_id = data.get("userId")
+    author_id = data.get("_id")
     try:
         post_id = PydanticObjectId(postId)
         author_id = PydanticObjectId(author_id)
@@ -692,7 +686,7 @@ async def create_comment(postId: str, data: dict):
         comment_data = jsonable_encoder(new_comment)
         comment_data["author"] = {
             "username": author.username,
-            "handle": "@" + author.username,
+            "handle": data["_id"],
             "avatar": author.avatar
         }
         comment_data["stats"] = {
