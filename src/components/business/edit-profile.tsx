@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
+import { useUserStore } from "@/store/user.store";
 import {
   Dialog,
   DialogContent,
@@ -13,17 +14,14 @@ import { Input } from "@/components/basic/input";
 import { Textarea } from "@/components/basic/textarea";
 import { Label } from "@/components/basic/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/basic/avatar";
-import { Camera, X } from "lucide-react";
+import { Camera } from "lucide-react";
 import { toast } from "react-toastify";
-
+import { MediaService } from "@/services/media.service";
+import { getImageUrl } from "@/utils/utils";
+import { useRouter } from "next/navigation";
+import { Profile } from "@/types/profile";
 interface EditProfileProps {
-  profile: {
-    name: string;
-    handle: string;
-    avatar: string;
-    headerImage?: string;
-    bio?: string;
-  };
+  profile: Profile;
   onSave: (updatedProfile: any) => void;
 }
 
@@ -31,20 +29,24 @@ const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 
 export function EditProfile({ profile, onSave }: EditProfileProps) {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState(profile.name);
   const [bio, setBio] = useState(profile.bio ?? "");
-  const [avatarPreview, setAvatarPreview] = useState(profile.avatar);
-  const [headerPreview, setHeaderPreview] = useState(profile.headerImage ?? "");
+  const [avatarPreview, setAvatarPreview] = useState(getImageUrl(profile.avatar));
+  const [headerPreview, setHeaderPreview] = useState(getImageUrl(profile.headerImage));
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [headerFile, setHeaderFile] = useState<File | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const { user, setUser } = useUserStore();
 
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const headerInputRef = useRef<HTMLInputElement>(null);
 
   const validateFile = (file: File) => {
     if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
-      toast.error("只支持 JPG、PNG、GIF 和 WebP 格式的图片");
+      toast.error("只支持 JPG、JPEG、PNG、GIF、和 WebP 格式的图片");
       return false;
     }
     if (file.size > MAX_FILE_SIZE) {
@@ -54,7 +56,47 @@ export function EditProfile({ profile, onSave }: EditProfileProps) {
     return true;
   };
 
-  const handleFileChange = (
+  const uploadImage = async (file: File | null, type: "avatar" | "header") => {
+    if (!file || !user) return null;
+    try {
+      const uploadData = {
+        _id: profile.handle,
+        type: type,
+      };
+      const response = await MediaService.uploadMedia(file, uploadData);
+      if (response.code === 200 && response.data) {
+        const imageUrl = getImageUrl(response.data.url);
+
+        // 更新预览和store中的用户数据
+        if (type === "avatar") {
+          setAvatarPreview(imageUrl);
+          setUser({
+            ...user,
+            avatar: response.data.url,
+          });
+          onSave({ ...profile, avatar: response.data.url });
+        } else if (type === "header") {
+          setHeaderPreview(imageUrl);
+          setUser({
+            ...user,
+            headerImage: response.data.url,
+          });
+          onSave({ ...profile, headerImage: response.data.url });
+        }
+
+        toast.success(`${type === "avatar" ? "头像" : "封面"}更新成功`);
+
+        // 刷新页面以获取新图片
+        router.refresh();
+      } else {
+        throw new Error("上传失败");
+      }
+    } catch (error) {
+      toast.error(`${type === "avatar" ? "头像" : "封面"}上传失败`);
+    }
+  };
+
+  const handleFileChange = async (
     event: React.ChangeEvent<HTMLInputElement>,
     type: "avatar" | "header"
   ) => {
@@ -66,6 +108,7 @@ export function EditProfile({ profile, onSave }: EditProfileProps) {
       return;
     }
 
+    // 先显示本地预览
     const reader = new FileReader();
     reader.onloadend = () => {
       if (type === "avatar") {
@@ -77,18 +120,26 @@ export function EditProfile({ profile, onSave }: EditProfileProps) {
       }
     };
     reader.readAsDataURL(file);
+
+    // 立即上传图片
+    await uploadImage(file, type);
   };
 
-  const handleSave = () => {
-    // Here you would typically upload the files to your storage service
-    // and get back the URLs before calling onSave
-    onSave({
-      name,
-      bio,
-      avatar: avatarPreview,
-      headerImage: headerPreview,
-    });
-    setOpen(false);
+  const handleSave = async () => {
+    try {
+      setIsLoading(true);
+      // 只更新基本信息
+      await onSave({
+        name,
+        bio,
+      });
+      toast.success("资料更新成功");
+      setOpen(false);
+    } catch (error) {
+      toast.error("保存失败，请重试");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -173,8 +224,9 @@ export function EditProfile({ profile, onSave }: EditProfileProps) {
           </div>
           <Button
             onClick={handleSave}
+            disabled={isLoading}
             className='w-full bg-accent text-accent-foreground hover:bg-accent-dark rounded-full'>
-            保存
+            {isLoading ? "保存中..." : "保存"}
           </Button>
         </div>
       </DialogContent>

@@ -30,22 +30,6 @@ export interface Post {
 
 // 用于创建帖子的数据类型
 export interface CreatePostData {
-  authorId: string;
+  _id: string;
   content: string;
-  media?: Array<{
-    type: "image" | "video";
-    url: string;
-  }>;
-  isRepost: boolean;
-  originalPost?: string;
-  replyTo?: string;
-}
-
-// 用于API返回的数据类型
-export interface PostResponse {
-  code: number;
-  msg: string;
-  data: {
-    posts: Post[];
-  };
 }

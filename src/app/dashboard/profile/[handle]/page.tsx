@@ -120,7 +120,6 @@ const staticPosts: Post[] = [
   },
 ];
 
-// Simulated current user (this would normally come from an authentication system)
 const currentUser = {
   name: "柳井户",
   handle: "@lanigiro514",
@@ -137,19 +136,7 @@ export default function ProfilePage() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
 
-  useEffect(() => {
-    // 模拟API调用来获取用户数据
-    const userData = users[handle as keyof typeof users];
-    if (userData) {
-      setProfile(userData);
-      // 过滤出属于该用户的帖子
-      const userPosts = staticPosts.filter((post) => post.author?.handle === userData.handle);
-      setPosts(userPosts);
-    } else {
-      // 处理用户不存在的情况
-      router.push("/404"); // 假设你有一个404页面
-    }
-  }, [handle, router]);
+  useEffect(() => {}, [handle, router]);
 
   useEffect(() => {
     const postId = searchParams.get("postId");

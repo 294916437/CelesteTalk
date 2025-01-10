@@ -24,20 +24,22 @@ import {
 import { VideoPlayer } from "@/components/business/video-player";
 import { ReplyDialog } from "@/components/business/reply-dialog";
 import { ImagePreview } from "@/components/business/image-preview";
-import { cn } from "@/utils/utils";
+import { cn, getImageUrl } from "@/utils/utils";
 import { Post } from "@/types/post";
+import { Author } from "@/types/user";
 import Link from "next/link";
 interface PostListProps {
-  initialPosts: Post[];
-  handlePostClick: (post: Post) => void;
+  posts: Post[];
+  onPostClick: (post: Post) => void;
+  currentUser: Author | null;
   onRefresh?: () => Promise<void>; // 添加刷新回调
   isLoading?: boolean;
   error?: string | null;
 }
 
 export function PostList({
-  initialPosts,
-  handlePostClick,
+  posts,
+  onPostClick,
   onRefresh,
   isLoading = false,
   error = null,
@@ -73,11 +75,11 @@ export function PostList({
   return (
     <>
       <div className='flex flex-col divide-y divide-border'>
-        {initialPosts.map((post) => (
+        {posts.map((post) => (
           <article
             key={post._id}
             className='p-4 transition-colors duration-200 hover:bg-black/[0.02] dark:hover:bg-white/[0.02] cursor-pointer'
-            onClick={() => handlePostClick(post)}>
+            onClick={() => onPostClick(post)}>
             {/* Post Content */}
             <div className='flex gap-4'>
               {/* Avatar Section */}
@@ -85,7 +87,7 @@ export function PostList({
                 href={`/dashboard/profile/${post.author.handle.slice(1)}`}
                 onClick={(e) => e.stopPropagation()}>
                 <Avatar className='h-10 w-10 transition-transform duration-200 hover:scale-105'>
-                  <AvatarImage src={post.author.avatar} />
+                  <AvatarImage src={getImageUrl(post.author.avatar)} />
                   <AvatarFallback>{post.author.username}</AvatarFallback>
                 </Avatar>
               </Link>
@@ -175,7 +177,7 @@ export function PostList({
                           )}
                           onClick={(e) => handleImageClick(post, index, e)}>
                           <img
-                            src={media.url}
+                            src={getImageUrl(media.url)}
                             alt=''
                             className='rounded-lg w-full h-auto object-contain transition-transform duration-200 hover:brightness-90 max-h-[512px]'
                           />
@@ -188,7 +190,7 @@ export function PostList({
                             post.media!.length === 3 && index === 0 && "col-span-2"
                           )}
                           onClick={(e) => e.stopPropagation()}>
-                          <VideoPlayer src={media.url} />
+                          <VideoPlayer src={getImageUrl(media.url)} />
                         </div>
                       )
                     )}

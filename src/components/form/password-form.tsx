@@ -7,7 +7,7 @@ import { Card, CardContent } from "@/components/data/card";
 import { Input } from "@/components/basic/input";
 import { Label } from "@/components/basic/label";
 import Link from "next/link";
-import { AnimatedWrapper } from "./animated-wrapper";
+import { AnimatedWrapper } from "@/components/basic/animated-wrapper";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { resetPasswordSchema } from "@/utils/validations/auth";
@@ -17,12 +17,7 @@ import type { z } from "zod";
 type ResetPasswordFormValues = z.infer<typeof resetPasswordSchema>;
 
 export function PasswordForm({ className, ...props }: React.ComponentProps<"div">) {
-  const {
-    handleSendCode: sendCode,
-    handleSubmit: submitReset,
-    loading,
-    countdown,
-  } = usePassword();
+  const { handleSendEmailCode, handleSubmit, loading, countdown } = usePassword();
 
   const form = useForm<ResetPasswordFormValues>({
     resolver: zodResolver(resetPasswordSchema),
@@ -40,11 +35,11 @@ export function PasswordForm({ className, ...props }: React.ComponentProps<"div"
       return;
     }
 
-    await sendCode(email);
+    await handleSendEmailCode(email);
   };
 
   const onSubmit = async (values: ResetPasswordFormValues) => {
-    await submitReset({
+    await handleSubmit({
       email: values.email,
       code: values.code,
       password: values.password,

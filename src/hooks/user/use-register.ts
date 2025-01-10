@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { AuthService } from "@/services/user.service";
+import { UserService } from "@/services/user.service";
 import { RegisterData, AuthError } from "@/types/auth";
 import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
+import { EmailService } from "@/services/email.service";
 
 export function useRegister() {
   const [isRegistering, setIsRegistering] = useState(false);
@@ -21,14 +22,14 @@ export function useRegister() {
       });
     }, 1000);
   };
-  const handleSendCode = async (email: string) => {
+  const handleSendEmailCode = async (email: string) => {
     if (!email) {
       toast.error("请输入邮箱地址");
       return;
     }
     try {
       setLoading(true);
-      await AuthService.sendVerificationCode(email);
+      await EmailService.sendVerifyCode(email, "register");
       toast.success("验证码已发送");
       startCountdown();
     } catch (error) {
@@ -37,10 +38,10 @@ export function useRegister() {
       setLoading(false);
     }
   };
-  const register = async (data: RegisterData) => {
+  const handleSubmit = async (data: RegisterData) => {
     setIsRegistering(true);
     try {
-      const response = await AuthService.register(data);
+      const response = await UserService.register(data);
 
       if (response.code === 200) {
         toast.success("注册成功！");
@@ -60,8 +61,8 @@ export function useRegister() {
   return {
     loading,
     countdown,
-    handleSendCode,
-    register,
+    handleSendEmailCode,
+    handleSubmit,
     isRegistering,
   };
 }

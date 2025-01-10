@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { AuthService } from "@/services/user.service";
+import { UserService } from "@/services/user.service";
+import { EmailService } from "@/services/email.service";
 import { toast } from "react-toastify";
 import { useRouter } from "next/navigation";
 import type { ResetPasswordData } from "@/types/auth";
@@ -22,14 +23,14 @@ export function usePassword() {
     }, 1000);
   };
 
-  const handleSendCode = async (email: string) => {
+  const handleSendEmailCode = async (email: string) => {
     if (!email) {
       toast.error("请输入邮箱地址");
       return;
     }
     try {
       setLoading(true);
-      await AuthService.sendVerificationCode(email);
+      await EmailService.sendVerifyCode(email, "reset-password");
       toast.success("验证码已发送");
       startCountdown();
     } catch (error) {
@@ -42,7 +43,7 @@ export function usePassword() {
   const handleSubmit = async (data: ResetPasswordData) => {
     try {
       setLoading(true);
-      await AuthService.password(data);
+      await UserService.password(data);
       toast.success("密码重置成功");
       router.push("/login");
     } catch (error) {
@@ -55,7 +56,7 @@ export function usePassword() {
   return {
     loading,
     countdown,
-    handleSendCode,
+    handleSendEmailCode,
     handleSubmit,
   };
 }

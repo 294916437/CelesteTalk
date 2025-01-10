@@ -2,7 +2,7 @@ import { HttpClient } from "@/utils/fetch";
 import { LoginData, RegisterData, ResetPasswordData, AuthResponseData } from "@/types/auth";
 import { ApiResponse } from "@/types/api";
 
-export class AuthService {
+export class UserService {
   static async login(data: LoginData): Promise<ApiResponse> {
     return HttpClient.post<ApiResponse<AuthResponseData>>("/users/login", { data });
   }
@@ -17,9 +17,5 @@ export class AuthService {
 
   static async logout(): Promise<ApiResponse> {
     return HttpClient.post<ApiResponse<void>>("/users/logout");
-  }
-
-  static async sendVerificationCode(email: string): Promise<ApiResponse> {
-    return HttpClient.post<ApiResponse<void>>("/users/verification-code", { data: { email } });
   }
 }

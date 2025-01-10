@@ -12,18 +12,13 @@ import { Card, CardContent } from "@/components/data/card";
 import { Input } from "@/components/basic/input";
 import { Label } from "@/components/basic/label";
 import Link from "next/link";
-import { AnimatedWrapper } from "./animated-wrapper";
+import { AnimatedWrapper } from "@/components/basic/animated-wrapper";
 
 type RegisterFormValues = z.infer<typeof registerSchema>;
 
 export function RegisterForm({ className, ...props }: React.ComponentProps<"div">) {
-  const {
-    register,
-    isRegistering,
-    loading,
-    countdown,
-    handleSendCode: sendCode,
-  } = useRegister();
+  const { handleSubmit, isRegistering, loading, countdown, handleSendEmailCode } =
+    useRegister();
   const form = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
     defaultValues: {
@@ -40,10 +35,10 @@ export function RegisterForm({ className, ...props }: React.ComponentProps<"div"
       return;
     }
     console.log(email);
-    await sendCode(email);
+    await handleSendEmailCode(email);
   };
   const onSubmit = (data: RegisterFormValues) => {
-    register(data);
+    handleSubmit(data);
   };
 
   return (

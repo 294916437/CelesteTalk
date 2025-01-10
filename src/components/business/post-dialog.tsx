@@ -21,45 +21,45 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/basic/tooltip";
-
+import { useCreatePost } from "@/hooks/post/useCreatePost";
+import { getImageUrl } from "@/utils/utils";
+import { Author } from "@/types/user";
 interface PostDialogProps {
-  user?: {
-    name: string;
-    handle: string;
-    avatar: string;
-  };
+  currentUser?: Author; // 改为可选
   onPost?: (post: {
     content: string;
     media: { type: "image" | "video"; url: string }[];
   }) => void;
 }
 
-export function PostDialog({
-  user = {
-    name: "用户",
-    handle: "@user",
-    avatar: "/placeholder-avatar.jpg",
-  },
-  onPost,
-}: PostDialogProps) {
+const defaultUser: Author = {
+  name: "访客",
+  handle: "@guest",
+  avatar: "/placeholder-avatar.jpg",
+};
+
+export function PostDialog({ currentUser = defaultUser, onPost }: PostDialogProps) {
   const [open, setOpen] = React.useState(false);
   const [content, setContent] = React.useState("");
   const [media, setMedia] = React.useState<{ type: "image" | "video"; url: string }[]>([]);
   const [isUploading, setIsUploading] = React.useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const { createPost, isSubmitting } = useCreatePost();
+  const [uploadedFiles, setUploadedFiles] = React.useState<File[]>([]);
 
   const handleMediaUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (files && files.length > 0) {
       setIsUploading(true);
       try {
-        // Simulate upload delay
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-        const newMedia = Array.from(files).map((file) => ({
+        const newFiles = Array.from(files);
+        setUploadedFiles((prev) => [...prev, ...newFiles].slice(0, 4));
+
+        const newMedia = newFiles.map((file) => ({
           type: file.type.startsWith("image/") ? ("image" as const) : ("video" as const),
           url: URL.createObjectURL(file),
         }));
-        setMedia((prev) => [...prev, ...newMedia].slice(0, 4)); // Max 4 media files
+        setMedia((prev) => [...prev, ...newMedia].slice(0, 4));
       } finally {
         setIsUploading(false);
       }
@@ -68,15 +68,28 @@ export function PostDialog({
 
   const removeMedia = (index: number) => {
     setMedia((prev) => prev.filter((_, i) => i !== index));
+    setUploadedFiles((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const handlePost = () => {
-    if (onPost) {
-      onPost({ content, media });
+  const handlePost = async () => {
+    if (!currentUser || content.trim() === "") return;
+
+    const postData = {
+      _id: currentUser.handle, // 使用 _id 而不是 handle
+      content: content,
+    };
+
+    const result = await createPost(postData, uploadedFiles);
+
+    if (result) {
+      if (onPost) {
+        onPost({ content, media });
+      }
+      setContent("");
+      setMedia([]);
+      setUploadedFiles([]);
+      setOpen(false);
     }
-    setContent("");
-    setMedia([]);
-    setOpen(false);
   };
 
   const MAX_CHARS = 280;
@@ -97,8 +110,8 @@ export function PostDialog({
         </DialogHeader>
         <div className='flex gap-4'>
           <Avatar className='h-10 w-10'>
-            <AvatarImage src={user.avatar} />
-            <AvatarFallback>{user.name[0]}</AvatarFallback>
+            <AvatarImage src={getImageUrl(currentUser.avatar)} />
+            <AvatarFallback>{currentUser.name}</AvatarFallback>
           </Avatar>
           <div className='flex-1 flex flex-col'>
             <Textarea
@@ -241,9 +254,9 @@ export function PostDialog({
                 )}
                 <Button
                   className='rounded-full'
-                  disabled={isOverLimit || content.length === 0}
+                  disabled={isOverLimit || content.length === 0 || isSubmitting}
                   onClick={handlePost}>
-                  发布
+                  {isSubmitting ? "发布中..." : "发布"}
                 </Button>
               </div>
             </div>

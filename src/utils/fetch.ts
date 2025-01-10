@@ -12,21 +12,16 @@ interface RequestConfig extends RequestInit {
   contentType?: ContentType;
 }
 
-// 添加调试日志
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL;
-const API_PREFIX = "/api/v1";
-console.log("API Base URL:", BASE_URL); // 添加这行来验证环境变量是否正确加载
+const API_PREFIX = "api/v1";
 
 export class HttpClient {
   private static async request<T>(endpoint: string, config: RequestConfig): Promise<T> {
-    // 确保endpoint以/开头
     const normalizedEndpoint = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
-    // 先拼接API前缀和endpoint
     const fullPath = `${API_PREFIX}${normalizedEndpoint}`;
-    // 然后创建完整的URL
     const url = new URL(fullPath, BASE_URL);
-
-    console.log("Request URL:", url.toString()); // 现在应该显示正确的URL
+    // 添加调试日志
+    console.log("Request URL:", url.toString());
 
     if (config.params) {
       Object.entries(config.params).forEach(([key, value]) => {
@@ -82,19 +77,9 @@ export class HttpClient {
   // 文件上传方法
   static async upload<T>(
     endpoint: string,
-    files: File | File[],
+    formData: FormData,
     config: RequestConfig = {}
   ): Promise<T> {
-    const formData = new FormData();
-
-    if (Array.isArray(files)) {
-      files.forEach((file, index) => {
-        formData.append(`file${index}`, file);
-      });
-    } else {
-      formData.append("file", files);
-    }
-
     return this.request<T>(endpoint, {
       ...config,
       method: "POST",

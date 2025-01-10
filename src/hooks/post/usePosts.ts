@@ -1,8 +1,10 @@
 import { useState, useEffect, useCallback } from "react";
-import { Post, PostResponse } from "@/types/post";
+import { Post } from "@/types/post";
+import { PostService } from "@/services/post.service";
+import { toast } from "react-toastify";
 
-export function usePosts(initialPosts: Post[] = []) {
-  const [posts, setPosts] = useState<Post[]>(initialPosts);
+export function usePosts() {
+  const [posts, setPosts] = useState<Post[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -10,17 +12,14 @@ export function usePosts(initialPosts: Post[] = []) {
     try {
       setIsLoading(true);
       setError(null);
-      // 获取帖子数据
-      const response = await fetch("/api/v1/posts");
-      const data = (await response.json()) as PostResponse;
-
-      if (data.code === 200 && data.data.posts) {
-        // 处理帖子数据
+      const response = await PostService.getHomePosts();
+      if (response.code === 200) {
+        setPosts(response.data.posts || []);
       } else {
-        setError(data.msg || "获取帖子失败");
+        setError(response.message || "获取主页帖子失败");
       }
     } catch (err) {
-      setError("获取帖子时发生错误");
+      setError("获取主页帖子时发生错误");
       console.error(err);
     } finally {
       setIsLoading(false);

@@ -2,7 +2,15 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { MoreHorizontal, Heart, MessageCircle, Share2, Bookmark, Trash2 } from "lucide-react";
+import {
+  MoreHorizontal,
+  Heart,
+  MessageCircle,
+  Share2,
+  Bookmark,
+  Trash2,
+  Loader2,
+} from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/basic/avatar";
 import { Button } from "@/components/basic/button";
 import {
@@ -26,17 +34,28 @@ import { VideoPlayer } from "./video-player";
 import { ImagePreview } from "./image-preview";
 import { cn } from "@/utils/utils";
 import { Post } from "@/types/post";
+import { Author } from "@/types/user";
 import Link from "next/link";
 import { ReplyDialog } from "./reply-dialog";
-
+import { getImageUrl } from "@/utils/utils";
 interface UserPostsProps {
   posts: Post[];
+  isLoading?: boolean;
+  error?: string | null;
   onDeletePost: (postId: string) => void;
   setPosts: React.Dispatch<React.SetStateAction<Post[]>>;
-  currentUser: { handle: string } | null;
+  currentUser: Author | null;
+  onRefresh?: () => void; // 添加刷新方法
 }
 
-export function UserPosts({ posts, onDeletePost, setPosts, currentUser }: UserPostsProps) {
+export function UserPosts({
+  posts,
+  isLoading,
+  onDeletePost,
+  setPosts,
+  currentUser,
+  onRefresh,
+}: UserPostsProps) {
   const router = useRouter();
   const [likedPosts, setLikedPosts] = React.useState<Set<string>>(new Set());
   const [bookmarkedPosts, setBookmarkedPosts] = React.useState<Set<string>>(new Set());
@@ -85,6 +104,7 @@ export function UserPosts({ posts, onDeletePost, setPosts, currentUser }: UserPo
     try {
       await onDeletePost(postId);
       toast.success("帖子已删除");
+      onRefresh?.(); // 调用刷新方法
     } catch (error) {
       toast.error("删除失败，请重试");
     } finally {
@@ -134,20 +154,32 @@ export function UserPosts({ posts, onDeletePost, setPosts, currentUser }: UserPo
     setReplyDialogOpen(true);
   }, []);
 
+  if (isLoading) {
+    return (
+      <div className='flex items-center justify-center py-8'>
+        <Loader2 className='h-8 w-8 animate-spin' />
+      </div>
+    );
+  }
+
+  if (posts.length === 0) {
+    return <div className='text-center py-8 text-muted-foreground'>还没有发布任何帖子</div>;
+  }
+
   return (
     <>
       <div className='flex flex-col divide-y divide-border'>
         {posts.map((post) => (
           <article
             key={post._id}
-            className='p-4 transition-colors duration-200 hover:bg-black/[0.02] dark:hover:bg-white/[0.02] cursor-pointer'
+            className='p-4 transition-colors duration-200 hover:bg-black/[0.02] dark:hover:bg白/[0.02] cursor-pointer'
             onClick={() => router.push(`/dashboard/profile?postId=${post._id}`)}>
             <div className='flex gap-4'>
               <Link
                 href={`/dashboard/profile/${post.author.handle.slice(1)}`}
                 onClick={(e) => e.stopPropagation()}>
                 <Avatar className='h-10 w-10 transition-transform duration-200 hover:scale-105'>
-                  <AvatarImage src={post.author.avatar} />
+                  <AvatarImage src={getImageUrl(post.author.avatar)} />
                   <AvatarFallback>{post.author.username}</AvatarFallback>
                 </Avatar>
               </Link>

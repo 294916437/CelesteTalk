@@ -2,105 +2,32 @@
 
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Post } from "@/types/post";
 import { PostDialog } from "@/components/business/post-dialog";
 import { PostList } from "@/components/business/post-list";
 import { PostDetails } from "@/components/business/post-details";
-
-const getRelativeTimestamp = (hoursAgo: number) => {
-  const date = new Date();
-  date.setHours(date.getHours() - hoursAgo);
-  return date.toISOString();
-};
-
-// Sample initial posts
-const initialPosts: Post[] = [
-  {
-    _id: "1",
-    authorId: "user1",
-    content:
-      "Just launched my new project! 🚀 Really excited to share this with everyone. What do you think?",
-    createdAt: getRelativeTimestamp(2),
-    isRepost: false,
-    updatedAt: getRelativeTimestamp(2),
-    likes: [],
-    repostCount: 0,
-    author: {
-      username: "John Doe",
-      handle: "@johndoe",
-      avatar: "/placeholder.svg",
-    },
-    stats: {
-      likes: 42,
-      comments: 12,
-      shares: 5,
-      views: 150,
-    },
-  },
-  {
-    _id: "2",
-    authorId: "user2",
-    content:
-      "Had an amazing time at the tech conference today! Met so many brilliant minds. #TechConf2024",
-    createdAt: getRelativeTimestamp(5),
-    isRepost: false,
-    updatedAt: getRelativeTimestamp(5),
-    likes: [],
-    repostCount: 0,
-    media: [
-      {
-        type: "image",
-        url: "/preview.jpg?height=512&width=1024",
-      },
-    ],
-    author: {
-      username: "Jane Smith",
-      handle: "@janesmith",
-      avatar: "/placeholder.svg",
-    },
-    stats: {
-      likes: 128,
-      comments: 24,
-      shares: 16,
-      views: 320,
-    },
-  },
-  {
-    _id: "3",
-    authorId: "user3",
-    content: "Check out this cool video with subtitles!",
-    createdAt: getRelativeTimestamp(1),
-    isRepost: false,
-    updatedAt: getRelativeTimestamp(1),
-    likes: [],
-    repostCount: 0,
-    media: [
-      {
-        type: "video",
-        url: "/video.mp4",
-      },
-    ],
-    author: {
-      username: "Video Tester",
-      handle: "@videotester",
-      avatar: "/placeholder.svg",
-    },
-    stats: {
-      likes: 15,
-      comments: 3,
-      shares: 2,
-      views: 75,
-    },
-  },
-];
+import { useUserStore } from "@/store/user.store";
+import { usePosts } from "@/hooks/post/usePosts";
+import { Post } from "@/types/post";
 
 export default function DashboardPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [selectedPost_Id, setSelectedPost_Id] = useState<string | null>(null);
-  const [posts, setPosts] = useState<Post[]>(initialPosts);
   const [isClient, setIsClient] = useState(false);
 
+  // 使用 hook 获取帖子数据
+  const { posts, isLoading, error, fetchPosts } = usePosts();
+  const user = useUserStore((state) => state.user);
+
+  const currentUser = user
+    ? {
+        name: user.username,
+        handle: user._id,
+        avatar: user.avatar,
+      }
+    : null;
+
+  // 初始化和路由参数变化时的处理
   useEffect(() => {
     setIsClient(true);
     const post_Id = searchParams.get("post_Id");
@@ -108,6 +35,19 @@ export default function DashboardPage() {
       setSelectedPost_Id(post_Id);
     }
   }, [searchParams]);
+
+  //定期刷新主页的帖子列表
+  useEffect(() => {
+    // 首次加载数据
+    fetchPosts();
+
+    // 设置定时刷新
+    const intervalId = setInterval(() => {
+      fetchPosts();
+    }, 60000); // 每分钟刷新一次
+
+    return () => clearInterval(intervalId);
+  }, [fetchPosts]);
 
   const handlePostClick = (post: Post) => {
     setSelectedPost_Id(post._id);
@@ -120,7 +60,7 @@ export default function DashboardPage() {
   };
 
   if (!isClient) {
-    return null; // or a loading spinner
+    return null;
   }
 
   const selectedPost = posts.find((post) => post._id === selectedPost_Id);
@@ -131,11 +71,25 @@ export default function DashboardPage() {
         <PostDetails post={selectedPost} onBack={handleBackToList} />
       ) : (
         <>
-          <div className='mx-auto w-full max-w-3xl rounded-xl bg-card p-4'>
-            <PostDialog />
-          </div>
+          {currentUser && (
+            <div className='mx-auto w-full max-w-3xl rounded-xl bg-card p-4'>
+              <PostDialog
+                currentUser={currentUser}
+                onPost={() => {
+                  fetchPosts(); // 发布新帖子后刷新列表
+                }}
+              />
+            </div>
+          )}
           <div className='mx-auto w-full max-w-3xl rounded-xl bg-background'>
-            <PostList initialPosts={posts} onPostClick={handlePostClick} />
+            <PostList
+              posts={posts}
+              isLoading={isLoading}
+              error={error}
+              onPostClick={handlePostClick}
+              currentUser={currentUser}
+              onRefresh={fetchPosts} // 添加刷新功能
+            />
           </div>
         </>
       )}
