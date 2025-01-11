@@ -406,8 +406,7 @@ async def get_user_likes(userId: str):
             code=200,
             msg="success",
             data={
-                "posts": posts_with_authors,
-                "total": len(posts_with_authors)
+                "posts": posts_with_authors
             }
         )
     except ValidationError as ve:
@@ -532,7 +531,7 @@ async def get_home_posts():
 
 
 @router.post("/search", response_description="搜索帖子")
-async def search_posts(data:dict):
+async def search_posts(data: dict):
     try:
         # 使用正则表达式进行模糊搜索
         posts = await Post.find(
@@ -583,7 +582,7 @@ async def search_posts(data:dict):
             code=200,
             msg="success",
             data={
-                "posts": posts_with_authors,
+                "posts": posts_with_authors
             }
         )
     except Exception as e:
