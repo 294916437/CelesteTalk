@@ -14,7 +14,9 @@ export class UserService {
   static async password(data: ResetPasswordData): Promise<ApiResponse> {
     return HttpClient.post<ApiResponse<void>>("/users/password", { data });
   }
-
+  static async getUser(id: string): Promise<ApiResponse> {
+    return HttpClient.get<ApiResponse<void>>(`/users/${id}`);
+  }
   static async logout(): Promise<ApiResponse> {
     return HttpClient.post<ApiResponse<void>>("/users/logout");
   }

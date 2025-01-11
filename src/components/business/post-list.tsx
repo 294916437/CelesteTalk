@@ -15,6 +15,7 @@ import { PostItem } from "@/components/business/post-item";
 import { SearchBar } from "@/components/business/search-bar";
 import { usePostSearch } from "@/hooks/post/usePostSearch";
 import { useDebouncedCallback } from "@/hooks/common/useDebounce";
+import { useBookmark } from "@/hooks/post/usePostBookmark";
 
 interface PostListProps {
   posts: Post[];
@@ -41,14 +42,18 @@ export function PostList({ posts: initialPosts, ...props }: PostListProps) {
     );
   }, []);
 
+  const { isPostLiked, processingPosts, toggleLike } = usePostLike(
+    posts,
+    props.currentUser?.handle ?? "",
+    setPosts
+  );
   const {
-    likedPosts,
-    isLoading: isLikeLoading,
-    toggleLike,
-  } = usePostLike(posts, props.currentUser?.handle ?? "", updatePostLikes);
-  const { bookmarkedPosts, toggleBookmark } = usePostInteraction();
+    bookmarkedPosts,
+    processingPosts: processingBookmarks,
+    toggleBookmark,
+  } = useBookmark();
   const { replyingTo, replyDialogOpen, setReplyDialogOpen, openReplyDialog, handleReply } =
-    useReplyDialog();
+    useReplyDialog(props.onRefresh); // 添加刷新回调
   const {
     previewImages,
     initialImageIndex,
@@ -84,6 +89,17 @@ export function PostList({ posts: initialPosts, ...props }: PostListProps) {
     router.push(`/dashboard?postId=${post._id}`);
   };
 
+  // 处理回复提交
+  const handleReplySubmit = React.useCallback(
+    (content: string, replyToId: string) => {
+      if (!props.currentUser?.handle) {
+        return;
+      }
+      handleReply(content, props.currentUser.handle);
+    },
+    [props.currentUser, handleReply]
+  );
+
   return (
     <>
       <div className='sticky top-14 z-10 bg-background/95 backdrop-blur-sm border-b'>
@@ -103,13 +119,14 @@ export function PostList({ posts: initialPosts, ...props }: PostListProps) {
             <PostItem
               key={post._id}
               post={post}
+              currentUserHandle={props.currentUser?.handle ?? ""}
               onLike={toggleLike}
               onBookmark={toggleBookmark}
+              isProcessingBookmark={processingBookmarks.has(post._id)}
+              isBookmarked={bookmarkedPosts.has(post._id)}
               onReply={openReplyDialog}
               onImageClick={handleImageClick}
               onPostClick={handlePostClick}
-              isLiked={likedPosts.has(post._id)}
-              isBookmarked={bookmarkedPosts.has(post._id)}
             />
           ))
         )}
@@ -120,9 +137,9 @@ export function PostList({ posts: initialPosts, ...props }: PostListProps) {
         <ReplyDialog
           open={replyDialogOpen}
           onOpenChange={setReplyDialogOpen}
-          post={replyingTo.post}
-          replyTo={replyingTo.reply ?? null} // replyTo是回复评论的场景
-          onReply={handleReply}
+          post={replyingTo?.post ?? null}
+          replyTo={replyingTo?.reply ?? null} // replyTo是回复评论的场景
+          onReply={handleReplySubmit}
           currentUser={props.currentUser}
         />
       )}

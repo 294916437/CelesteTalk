@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { MoreHorizontal, Heart, MessageCircle, Share2, Bookmark } from "lucide-react";
+import { MoreHorizontal, Heart, MessageCircle, Share2, Bookmark, Loader2 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/basic/avatar";
 import { Button } from "@/components/basic/button";
 import {
@@ -17,18 +17,21 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/basic/tooltip";
-import { VideoPlayer } from "./video-player";
+import { VideoPlayer } from "@/components/business/video-player";
 import { cn, getImageUrl } from "@/utils/utils";
 import { Post } from "@/types/post";
+import { Author } from "@/types/user";
+
 import Link from "next/link";
 interface PostItemProps {
   post: Post;
+  currentUserHandle: string;
   onLike: (postId: string, event: React.MouseEvent) => void;
-  onBookmark: (postId: string, event: React.MouseEvent) => void;
+  onBookmark: (postId: string) => void;
+  isProcessingBookmark?: boolean;
   onReply: (post: Post) => void;
   onImageClick: (post: Post, index: number, event: React.MouseEvent) => void;
   onPostClick: (post: Post) => void;
-  isLiked: boolean;
   isBookmarked: boolean;
 }
 
@@ -68,18 +71,39 @@ function useFormattedTime(timestamp: string) {
 
 export function PostItem({
   post,
+  currentUserHandle,
   onLike,
   onBookmark,
+  isProcessingBookmark,
   onReply,
   onImageClick,
   onPostClick,
-  isLiked,
   isBookmarked,
 }: PostItemProps) {
+  const isLiked = React.useMemo(
+    () => post.likes.includes(currentUserHandle),
+    [post.likes, currentUserHandle]
+  );
+
+  const handleLike = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onLike(post._id, e);
+  };
+
+  const handleBookmark = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onBookmark(post._id);
+  };
+
+  const handleReply = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onReply(post);
+  };
+
   const formattedTime = useFormattedTime(post.createdAt);
   return (
     <article
-      className='p-4 transition-colors duration-200 hover:bg-black/[0.02] dark:hover:bg-white/[0.02] cursor-pointer'
+      className='p-4 transition-colors duration-200 hover:bg-black/[0.02] dark:hover:bg白/[0.02] cursor-pointer'
       onClick={() => onPostClick(post)}>
       <div className='flex gap-4'>
         <Link
@@ -189,26 +213,25 @@ export function PostItem({
             <Button
               variant='ghost'
               size='sm'
-              onClick={(e) => onLike(post._id, e)}
-              className={`h-8 gap-1.5 transition-all duration-200 group
-                ${
-                  isLiked
-                    ? "text-red-500 hover:text-red-600 hover:bg-red-50"
-                    : "text-muted-foreground hover:text-red-500 hover:bg-red-50"
-                }`}>
+              onClick={handleLike}
+              className={cn(
+                "h-8 gap-1.5 transition-all duration-200 group",
+                isLiked
+                  ? "text-red-500 hover:text-red-600 hover:bg-red-50"
+                  : "text-muted-foreground hover:text-red-500 hover:bg-red-50"
+              )}>
               <Heart
-                className={`h-4 w-4 transition-transform duration-200 
-                  ${isLiked ? "scale-110 fill-current" : "scale-100 group-hover:scale-110"}`}
+                className={cn(
+                  "h-4 w-4 transition-transform duration-200",
+                  isLiked ? "scale-110 fill-current" : "scale-100 group-hover:scale-110"
+                )}
               />
-              <span className='text-xs'>{post.stats.likes}</span>
+              <span className='text-xs'>{post.likes.length}</span>
             </Button>
             <Button
               variant='ghost'
               size='sm'
-              onClick={(e) => {
-                e.stopPropagation();
-                onReply(post);
-              }}
+              onClick={handleReply}
               className='h-8 gap-1.5 text-muted-foreground transition-colors duration-200 hover:text-blue-500 hover:bg-blue-50'>
               <MessageCircle className='h-4 w-4 transition-transform duration-200 group-hover:scale-110' />
               <span className='text-xs'>{post.stats.comments}</span>
@@ -224,17 +247,19 @@ export function PostItem({
             <Button
               variant='ghost'
               size='sm'
-              onClick={(e) => onBookmark(post._id, e)}
-              className={`h-8 ml-auto transition-all duration-200
-                ${
-                  isBookmarked
-                    ? "text-blue-500 hover:text-blue-600 hover:bg-blue-50"
-                    : "text-muted-foreground hover:text-blue-500 hover:bg-blue-50"
-                }`}>
-              <Bookmark
-                className={`h-4 w-4 transition-transform duration-200 
-                  ${isBookmarked ? "fill-current" : ""}`}
-              />
+              onClick={handleBookmark}
+              disabled={isProcessingBookmark}
+              className={cn(
+                "h-8 ml-auto transition-all duration-200",
+                isBookmarked
+                  ? "text-blue-500 hover:text-blue-600 hover:bg-blue-50"
+                  : "text-muted-foreground hover:text-blue-500 hover:bg-blue-50"
+              )}>
+              {isProcessingBookmark ? (
+                <Loader2 className='h-4 w-4 animate-spin' />
+              ) : (
+                <Bookmark className={cn("h-4 w-4", isBookmarked && "fill-current")} />
+              )}
             </Button>
           </div>
         </div>

@@ -1,73 +1,89 @@
-import { useState, useEffect, useCallback } from "react";
+import * as React from "react";
 import { Post } from "@/types/post";
 import { PostService } from "@/services/post.service";
 
 export function usePostLike(
   posts: Post[],
   currentUserHandle: string,
-  updatePostLikes: (postId: string, likes: string[]) => void
+  updatePosts: (updatedPosts: Post[]) => void
 ) {
-  const [likedPosts, setLikedPosts] = useState<Set<string>>(new Set());
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [processingPosts, setProcessingPosts] = React.useState<Set<string>>(new Set());
 
-  // 初始化已点赞的帖子
-  useEffect(() => {
-    if (currentUserHandle && posts.length > 0) {
-      const initialLikedPosts = new Set(
-        posts.filter((post) => post.likes.includes(currentUserHandle)).map((post) => post._id)
-      );
-      setLikedPosts(initialLikedPosts);
-    }
-  }, [posts, currentUserHandle]);
+  const isPostLiked = React.useCallback(
+    (post: Post) => post.likes.includes(currentUserHandle),
+    [currentUserHandle]
+  );
 
-  const toggleLike = useCallback(
+  const toggleLike = React.useCallback(
     async (postId: string) => {
-      setIsLoading(true);
+      if (!currentUserHandle) {
+        return;
+      }
+
+      if (processingPosts.has(postId)) return;
+
       const post = posts.find((p) => p._id === postId);
       if (!post) return;
 
-      const isLiked = likedPosts.has(postId);
-      const newLikedPosts = new Set(likedPosts);
-      const originalLikes = [...post.likes];
+      setProcessingPosts((prev) => new Set([...prev, postId]));
 
       try {
-        // 乐观更新
-        if (isLiked) {
-          newLikedPosts.delete(postId);
-          updatePostLikes(
-            postId,
-            post.likes.filter((like) => like !== currentUserHandle)
-          );
-        } else {
-          newLikedPosts.add(postId);
-          updatePostLikes(postId, [...post.likes, currentUserHandle]);
-        }
-        setLikedPosts(newLikedPosts);
+        // 1. 确定当前点赞状态
+        const isCurrentlyLiked = post.likes.includes(currentUserHandle);
+        const originalLikes = [...post.likes];
 
-        // 发送API请求
-        if (isLiked) {
+        // 2. 乐观更新
+        updatePosts(
+          posts.map((p) =>
+            p._id === postId
+              ? {
+                  ...p,
+                  likes: isCurrentlyLiked
+                    ? p.likes.filter((id) => id !== currentUserHandle)
+                    : [...p.likes, currentUserHandle],
+                }
+              : p
+          )
+        );
+
+        // 3. API 请求
+        if (isCurrentlyLiked) {
           await PostService.unlikePost(postId, currentUserHandle);
         } else {
           await PostService.likePost(postId, currentUserHandle);
         }
       } catch (error) {
-        if (isLiked) {
-          newLikedPosts.add(postId);
-        } else {
-          newLikedPosts.delete(postId);
+        // 4. 发生错误时回滚到原始状态
+        const failedPost = posts.find((p) => p._id === postId);
+        if (failedPost) {
+          updatePosts(
+            posts.map((p) =>
+              p._id === postId
+                ? {
+                    ...p,
+                    likes: failedPost.likes.includes(currentUserHandle)
+                      ? []
+                      : [currentUserHandle],
+                  }
+                : p
+            )
+          );
         }
-        setLikedPosts(newLikedPosts);
-        updatePostLikes(postId, originalLikes);
       } finally {
-        setIsLoading(false);
+        // 5. 清理处理状态
+        setProcessingPosts((prev) => {
+          const next = new Set(prev);
+          next.delete(postId);
+          return next;
+        });
       }
     },
-    [posts, likedPosts, currentUserHandle, updatePostLikes]
+    [posts, currentUserHandle, updatePosts]
   );
 
   return {
-    likedPosts,
-    isLoading,
+    isPostLiked,
+    processingPosts,
     toggleLike,
   };
 }

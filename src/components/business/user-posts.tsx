@@ -368,6 +368,7 @@ export function UserPosts({
           post={replyingTo!}
           replyTo={null}
           onReply={handleReply}
+          currentUser={currentUser}
         />
       )}
     </>

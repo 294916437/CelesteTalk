@@ -25,7 +25,7 @@ import { useCreatePost } from "@/hooks/post/useCreatePost";
 import { getImageUrl } from "@/utils/utils";
 import { Author } from "@/types/user";
 interface PostDialogProps {
-  currentUser?: Author;
+  currentUser: Author;
   onPost?: (post: {
     content: string;
     media: { type: "image" | "video"; url: string }[];
@@ -33,7 +33,7 @@ interface PostDialogProps {
 }
 
 const defaultUser: Author = {
-  name: "访客",
+  username: "访客",
   handle: "@guest",
   avatar: "/placeholder-avatar.jpg",
 };
@@ -111,7 +111,7 @@ export function PostDialog({ currentUser = defaultUser, onPost }: PostDialogProp
         <div className='flex gap-4'>
           <Avatar className='h-10 w-10'>
             <AvatarImage src={getImageUrl(currentUser.avatar)} />
-            <AvatarFallback>{currentUser.name}</AvatarFallback>
+            <AvatarFallback>{currentUser.username}</AvatarFallback>
           </Avatar>
           <div className='flex-1 flex flex-col'>
             <Textarea

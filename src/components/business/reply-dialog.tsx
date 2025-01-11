@@ -94,12 +94,13 @@ export function ReplyDialog({
                 {replyTo ? (
                   <>
                     回复{" "}
-                    <span className='text-primary font-medium'>{replyTo.author?.handle}</span>{" "}
+                    <span className='text-primary font-medium'>{replyTo.author?.username}</span>{" "}
                     的评论
                   </>
                 ) : (
                   <>
-                    回复 <span className='text-primary font-medium'>{post.author?.handle}</span>{" "}
+                    回复{" "}
+                    <span className='text-primary font-medium'>{post.author?.username}</span>{" "}
                     的帖子
                   </>
                 )}

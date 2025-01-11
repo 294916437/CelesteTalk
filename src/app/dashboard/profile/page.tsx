@@ -44,7 +44,7 @@ export default function ProfilePage() {
   // 当前用户信息
   const currentUser = user
     ? {
-        name: user.username,
+        username: user.username,
         handle: user._id,
         avatar: user.avatar,
       }

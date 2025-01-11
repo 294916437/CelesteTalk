@@ -4,37 +4,36 @@ import { Post } from "@/types/post";
 import { Author } from "@/types/user";
 import { PostService } from "@/services/post.service";
 import { toast } from "react-toastify";
+import { CommentService } from "@/services/comment.service";
 
 export function useComments(post: Post, currentUser: Author | null) {
   const [comments, setComments] = React.useState<Comment[]>([]);
   const [isLoading, setIsLoading] = React.useState(false);
-  const [replyingTo, setReplyingTo] = React.useState<Comment | null>();
+  const [replyingTo, setReplyingTo] = React.useState<Comment | null>(null);
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
-
+  const [processingComments, setProcessingComments] = React.useState<Set<string>>(new Set());
   // 获取评论列表
   const fetchComments = React.useCallback(async () => {
     if (!post._id) return;
     setIsLoading(true);
     try {
       const response = await PostService.getPostComments(post._id);
-      setComments(response.data);
+      if (response.code === 200) {
+        setComments(response.data.comments);
+      } else {
+        toast.error(response.message || "评论加载失败，请重试");
+      }
     } catch (error) {
-      toast.error("获取评论失败");
+      toast.error("评论加载失败，请重试");
     } finally {
       setIsLoading(false);
     }
   }, [post._id]);
 
-  // 初始加载评论
-  React.useEffect(() => {
-    fetchComments();
-  }, [fetchComments]);
-
   // 处理评论提交
   const handleComment = React.useCallback(
     async (content: string) => {
       if (!currentUser) {
-        toast.error("请先登录");
         return;
       }
 
@@ -86,12 +85,12 @@ export function useComments(post: Post, currentUser: Author | null) {
 
   return {
     comments,
+    fetchComments,
     isLoading,
     replyingTo,
     isDialogOpen,
     setIsDialogOpen,
     handleComment,
     openReplyDialog,
-    refreshComments: fetchComments,
   };
 }
