@@ -47,9 +47,12 @@ add content like below:
 ```
 DATABASE_URL=value
 secret_key=value
+EMAIL=
+PASSWORD=
 ```
 
 ### install the library
 
 **recommended python edition > 3.10**
+
 input "pip install -r requirements.txt" in root terminal to install

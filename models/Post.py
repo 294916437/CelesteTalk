@@ -39,6 +39,8 @@ class Post(Document):
         now = format_datetime_now()
         if 'createdAt' not in data:
             data['createdAt'] = now
+        if 'updatedAt' not in data:
+            data['updatedAt'] = now
         if 'isRepost' not in data:
             data['isRepost'] = False
 

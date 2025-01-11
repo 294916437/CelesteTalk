@@ -3,8 +3,12 @@ __pycache__/
 *.py[cod]
 *$py.class
 
-# C extensions
-*.so
+# static files
+/static/uploads/image/*
+!static/uploads/image/.gitkeep
+/static/uploads/video/*
+!static/uploads/video/.gitkeep
+
 # .env
 .env
 # Distribution / packaging

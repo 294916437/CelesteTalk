@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from .endpoints import users, posts, comments, medias
+from .endpoints import users, posts, comments, medias,mails
 
 router = APIRouter()
 
@@ -24,4 +24,9 @@ router.include_router(
     medias.router,
     prefix="/medias",
     tags=["medias"]
+)
+router.include_router(
+    mails.router,
+    prefix="/mails",
+    tags=["mails"]
 )

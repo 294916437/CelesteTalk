@@ -79,7 +79,3 @@ async def send_email_verify_code(data: dict):
             status_code=500,
             detail=f"Failed to send verification code: {str(e)}"
         )
-
-
-
-

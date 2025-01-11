@@ -10,10 +10,10 @@ from models.User import User
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
-@router.post("", response_description="发布帖子")
+@router.post("", response_description="上传图片")
 async def create_post(
     file: UploadFile  = None,
-    data: str = Form(..., description="包含authorId、content等信息的JSON字符串")
+    data: str = Form(..., description="包含_id、content等信息的JSON字符串")
 ):
     try:
         data = json.loads(data)
@@ -28,7 +28,7 @@ async def create_post(
         # 保存文件到静态目录
         file_path = await save_upload_file(file, media_type)
         
-        user_id = data["userId"]
+        user_id = data["_id"]
         type = data["type"]
         
         user = await User.get(PydanticObjectId(user_id))

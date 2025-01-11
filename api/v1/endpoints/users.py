@@ -1,22 +1,15 @@
 from beanie import PydanticObjectId
 from fastapi import APIRouter, HTTPException
-from fastapi.utils import generate_unique_id
-
-
 from models.Email import verify_code
 from models.User import User
 import logging
-from pydantic import ValidationError, EmailStr
-
+from pydantic import ValidationError
 from utils.common import hash_password, verify_password
 from utils.time import format_datetime_now
 from middleware.response import CommonResponse
-
-###############################################
 from motor.motor_asyncio import AsyncIOMotorClient
 from server.init import settings
 from pymongo.errors import PyMongoError
-################################################
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -60,40 +53,6 @@ async def get_users():
         raise HTTPException(status_code=500, detail=str(e))
 
 
-# @router.post("/register", response_description="注册新用户")
-# async def register_user(user_data: dict):
-#     try:
-#         # 检查用户名是否已存在
-#         existing_username = await User.find_one({"username": user_data["username"]})
-#         if existing_username:
-#             raise HTTPException(status_code=400, detail="Username already exists")
-#
-#         # 检查邮箱是否已存在
-#         existing_email = await User.find_one({"email": user_data["email"]})
-#         if existing_email:
-#             raise HTTPException(status_code=400, detail="Email already exists")
-#
-#         # 验证注册验证码
-#         verify_result = await verify_code(user_data["email"], user_data["code"] , "register")
-#         if not verify_result:
-#             raise HTTPException(status_code=400, detail="Invalid verification code")
-#
-#
-#         # 创建新用户实例
-#         new_user = User(
-#             username=user_data["username"],
-#             email=user_data["email"],
-#             passwordHash=hash_password(user_data["password"]),  # 使用新的加密方法
-#         )
-#
-#         # 保存到数据库
-#         await new_user.insert()
-#         return CommonResponse(code=200, msg="success", data=None)
-#     except Exception as e:
-#         logger.error(f"Error in register_user: {str(e)}")
-#         raise HTTPException(status_code=500, detail=str(e))
-
-#####################################################################
 @router.post("/register", response_description="注册新用户")
 async def register_user(user_data: dict):
     client = AsyncIOMotorClient(settings.DATABASE_URL)
@@ -201,40 +160,6 @@ async def get_user(id: str):
 
 
 # 修改密码接口
-# @router.post("/password", response_description="修改密码")
-# async def change_password(data: dict):
-#     # data{"email": "EmailStr" , "old_password: "str", "new_password": "str", "code": "str"}
-#     try:
-#         email = data.get("email")
-#         new_password = data.get("new_password")
-#         # 查找用户
-#         user = await User.find_one({"email": email})
-#         if not user:
-#             raise HTTPException(status_code=400, detail="User not found with provided username and email")
-#
-#         # 验证重置密码验证码
-#         verify_result = await verify_code(email, data["code"], "reset-password")
-#         if not verify_result:
-#             raise HTTPException(status_code=400, detail="Invalid verification code")
-#
-#         # 验证密码
-#         if not verify_password(data.get("old_password"), user.passwordHash):
-#             raise HTTPException(status_code=401, detail="Invalid old password")
-#
-#         # 更新密码
-#         user.passwordHash = hash_password(new_password)
-#         await user.save()
-#         return CommonResponse(
-#             code=200,
-#             msg="update password successful",
-#             data=None
-#         )
-#     except Exception as e:
-#         logger.error(f"Error in change_password: {str(e)}")
-#         raise HTTPException(status_code=500, detail=str(e))
-
-#####################################################################
-# 修改密码接口
 @router.post("/password", response_description="修改密码")
 async def change_password(data: dict):
     # data{"email": "EmailStr" , "old_password" : "str", "new_password": "str", "code": "str"}
@@ -329,38 +254,6 @@ async def update_profile(profile: dict):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-# 关注用户接口
-# @router.post("/follow", response_description="关注用户")
-# async def follow_user(follow_id: str, current_id: str):
-#     try:
-#         follow_id = PydanticObjectId(follow_id)
-#         current_id = PydanticObjectId(current_id)
-#         # 查找当前用户
-#         current_user = await User.get(current_id)
-#         if not current_user:
-#             raise HTTPException(status_code=401, detail="Unauthorized")
-#         # 查找被关注的用户
-#         target_user = await User.get(follow_id)
-#         if not target_user:
-#             raise HTTPException(status_code=404, detail="User not found")
-#         # 关注用户
-#         if follow_id in current_user.following:
-#             raise HTTPException(status_code=400, detail="User already followed")
-#         current_user.following.append(follow_id)
-#         await current_user.save()
-#         # 反向关注
-#         target_user.followers.append(current_id)
-#         await target_user.save()
-#         return CommonResponse(
-#             code=200,
-#             msg="follow user successful",
-#             data=None
-#         )
-#     except Exception as e:
-#         logger.error(f"Error in follow_user: {str(e)}")
-#         raise HTTPException(status_code=500, detail=str(e))
-
-#####################################################################
 @router.post("/follow", response_description="关注用户")
 async def follow_user(follow_id: str, current_id: str):
     client = AsyncIOMotorClient(settings.DATABASE_URL)
@@ -409,40 +302,6 @@ async def follow_user(follow_id: str, current_id: str):
                 logger.error(f"Error in follow_user: {str(e)}")
                 raise HTTPException(status_code=500, detail=str(e))
 
-#####################################################################
-# 取消关注用户接口
-# @router.delete("/unfollow", response_description="取消关注用户")
-# async def unfollow_user(unfollow_id: str, current_id: str):
-#     # userId: str
-#     try:
-#         user_id = PydanticObjectId(unfollow_id)
-#         current_id = PydanticObjectId(current_id)
-#         # 查找当前用户
-#         current_user = await User.get(current_id)
-#         if not current_user:
-#             raise HTTPException(status_code=401, detail="Unauthorized")
-#         # 查找被取消关注的用户
-#         target_user = await User.get(user_id)
-#         if not target_user:
-#             raise HTTPException(status_code=404, detail="User not found")
-#         # 取消关注用户
-#         if user_id not in current_user.following:
-#             raise HTTPException(status_code=400, detail="User not followed")
-#         current_user.following.remove(user_id)
-#         await current_user.save()
-#         # 反向取消关注
-#         target_user.followers.remove(current_id)
-#         await target_user.save()
-#         return CommonResponse(
-#             code=200,
-#             msg="unfollow user successful",
-#             data=None
-#         )
-#     except Exception as e:
-#         logger.error(f"Error in unfollow_user: {str(e)}")
-#         raise HTTPException(status_code=500, detail=str(e))
-
-#####################################################################
 @router.delete("/unfollow", response_description="取消关注用户")
 async def unfollow_user(unfollow_id: str, current_id: str):
     client = AsyncIOMotorClient(settings.DATABASE_URL)
