@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { Post } from "@/types/post";
 import { PostService } from "@/services/post.service";
-import { toast } from "react-toastify";
 
 export function usePosts() {
   const [posts, setPosts] = useState<Post[]>([]);

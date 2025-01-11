@@ -26,7 +26,9 @@ export class PostService {
     }
     return HttpClient.upload("/posts", formData);
   }
-
+  static async searchPost(kw: string): Promise<ApiResponse> {
+    return HttpClient.post(`/posts/search/`, { data: { kw } });
+  }
   static async likePost(id: string, _id: string): Promise<ApiResponse> {
     return HttpClient.put(`/posts/${id}/like`, { data: { _id } });
   }

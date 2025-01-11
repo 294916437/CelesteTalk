@@ -30,7 +30,7 @@ export interface User {
   updatedAt: string;
 }
 export interface Author {
-  name: string;
+  username: string;
   handle: string;
   avatar: string;
 }

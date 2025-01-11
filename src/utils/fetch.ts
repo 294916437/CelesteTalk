@@ -6,7 +6,7 @@ enum ContentType {
 }
 
 interface RequestConfig extends RequestInit {
-  data?: object | FormData | Blob;
+  data?: object | FormData | Blob | string;
   params?: object;
   responseType?: "json" | "blob" | "arrayBuffer" | "text";
   contentType?: ContentType;

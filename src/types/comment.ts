@@ -17,7 +17,7 @@ export interface Comment {
     handle: string;
     avatar: string;
   };
-  stats?: {
+  stats: {
     likes: number;
     replies: number;
     shares: number;

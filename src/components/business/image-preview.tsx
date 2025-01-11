@@ -4,7 +4,7 @@ import * as React from "react";
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/data/dialog";
 import { Button } from "@/components/basic/button";
-import { cn } from "@/utils/utils";
+import { cn, getImageUrl } from "@/utils/utils";
 import { VisuallyHidden } from "@/components/feedback/visually-hidden";
 
 interface ImagePreviewProps {
@@ -94,7 +94,7 @@ export function ImagePreview({
             {images.map((src, index) => (
               <img
                 key={src}
-                src={src}
+                src={getImageUrl(src)}
                 alt=''
                 className={cn(
                   "absolute w-full h-full transition-all duration-300 object-contain",

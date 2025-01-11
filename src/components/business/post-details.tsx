@@ -14,7 +14,9 @@ import {
   Bookmark,
   ArrowLeft,
   MoreHorizontal,
+  Loader2,
 } from "lucide-react";
+import { useUserStore } from "@/store/user.store";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -22,76 +24,15 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/feedback/dropdown-menu";
-import { cn } from "@/utils/utils";
+import { cn, getImageUrl } from "@/utils/utils";
 import { Comment } from "@/types/comment";
-
+import { useComments } from "@/hooks/post/useComments";
+import { usePostLike } from "@/hooks/post/usePostLike";
+import { useCommentLike } from "@/hooks/post/useCommentLike";
 interface PostDetailsProps {
   post: Post;
   onBack: () => void;
 }
-
-const staticReplies: Comment[] = [
-  {
-    _id: "1",
-    postId: "post1",
-    authorId: "user1",
-    content: "Great post! I totally agree with your points.",
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    likes: [],
-    replyTo: null,
-    author: {
-      username: "Alice Johnson",
-      handle: "@alice_j",
-      avatar: "/placeholder.svg",
-    },
-    stats: {
-      likes: 5,
-      replies: 1,
-      shares: 2,
-    },
-  },
-  {
-    _id: "2",
-    postId: "post1",
-    authorId: "user2",
-    content: "Interesting perspective. Have you considered the impact on...",
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    likes: [],
-    replyTo: null,
-    author: {
-      username: "Bob Smith",
-      handle: "@bobsmith",
-      avatar: "/placeholder.svg",
-    },
-    stats: {
-      likes: 3,
-      replies: 0,
-      shares: 1,
-    },
-  },
-  {
-    _id: "3",
-    postId: "post1",
-    authorId: "user3",
-    content: "I disagree. Here's why...",
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    likes: [],
-    replyTo: "1",
-    author: {
-      username: "Carol White",
-      handle: "@carol_white",
-      avatar: "/placeholder.svg",
-    },
-    stats: {
-      likes: 2,
-      replies: 4,
-      shares: 0,
-    },
-  },
-];
 
 function formatPostTime(timestamp: string): string {
   const date = new Date(timestamp);
@@ -129,66 +70,80 @@ function formatExactTime(timestamp: string): string {
 }
 
 export function PostDetails({ post, onBack }: PostDetailsProps) {
-  const [isLiked, setIsLiked] = React.useState(false);
-  const [isBookmarked, setIsBookmarked] = React.useState(false);
-  const [replyDialogOpen, setReplyDialogOpen] = React.useState(false);
-  const [replies, setReplies] = React.useState<Comment[]>(staticReplies);
-  const [replyingTo, setReplyingTo] = React.useState<Comment | null>(null);
-  const [isClient, setIsClient] = React.useState(false);
+  const user = useUserStore((state) => state.user);
+  const currentUser = user
+    ? {
+        username: user.username,
+        handle: user._id,
+        avatar: user.avatar,
+      }
+    : null;
 
+  const [isBookmarked, setIsBookmarked] = React.useState(false);
+  const [isClient, setIsClient] = React.useState(false);
+  const [posts, setPosts] = React.useState([post]);
+
+  // 更新帖子的点赞状态
+  const updatePostLikes = React.useCallback((postId: string, likes: string[]) => {
+    setPosts((currentPosts) =>
+      currentPosts.map((p) => (p._id === postId ? { ...p, likes } : p))
+    );
+  }, []);
+
+  // 使用点赞 hook
+  const {
+    likedPosts,
+    isLoading: isLikeLoading,
+    toggleLike,
+  } = usePostLike(posts, currentUser?.handle ?? "", updatePostLikes);
+
+  // 使用评论 hook，包含点赞功能
+  const {
+    comments,
+    isLoading: isCommentsLoading,
+    replyingTo,
+    isDialogOpen,
+    setIsDialogOpen,
+    handleComment,
+    openReplyDialog,
+    refreshComments,
+  } = useComments(post, currentUser);
+  const { isCommentLiked, processingComments, toggleCommentLike } = useCommentLike(
+    comments,
+    currentUser?.handle
+  );
   React.useEffect(() => {
     setIsClient(true);
   }, []);
 
-  const handleLike = React.useCallback((_id: string | null = null) => {
-    if (_id === null) {
-    }
-  }, []);
+  // 处理点赞
+  const handleLike = React.useCallback(
+    async (commentId: string | null = null) => {
+      if (!currentUser) {
+        return;
+      }
+
+      if (commentId) {
+        await toggleCommentLike(commentId);
+      } else {
+        await toggleLike(post._id);
+      }
+    },
+    [currentUser, toggleLike, toggleCommentLike, post._id]
+  );
 
   const handleBookmark = React.useCallback(() => {
     setIsBookmarked((prev) => !prev);
-  }, []);
+  }, [currentUser]);
 
-  const handleReply = React.useCallback((content: string, replyTo_Id: string) => {
-    const newReply: Comment = {
-      _id: Date.now().toString(),
-      postId: post._id,
-      content,
-      authorId: "user",
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      replyTo: replyTo_Id,
-      likes: [],
-      author: {
-        username: "当前用户",
-        handle: "@currentuser",
-        avatar: "/placeholder-avatar.jpg",
-      },
-      stats: {
-        likes: 0,
-        replies: 0,
-        shares: 0,
-      },
-    };
-    setReplies((prev) => [newReply, ...prev]);
-  }, []);
-
-  const handleShare = React.useCallback((_id: string | null = null) => {
-    if (_id === null) {
-    }
-  }, []);
-
-  const openReplyDialog = React.useCallback((reply: Comment | null) => {
-    setReplyingTo(reply);
-    setReplyDialogOpen(true);
-  }, []);
+  const handleShare = React.useCallback((commentId: string | null = null) => {}, []);
 
   if (!isClient) {
-    return null; // or a loading spinner
+    return null;
   }
 
   return (
-    <div className='max-w-3xl mx-auto bg-background'>
+    <div className='max-w-3xl mx-auto bg-background w-full'>
       <div className='sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b'>
         <div className='flex items-center h-14 px-4'>
           <Button
@@ -204,14 +159,14 @@ export function PostDetails({ post, onBack }: PostDetailsProps) {
       <article className='px-4 py-3 border-b border-border'>
         <div className='flex items-start gap-3'>
           <Avatar className='h-12 w-12'>
-            <AvatarImage src={post.author?.avatar} />
-            <AvatarFallback>{post.author?.username}</AvatarFallback>
+            <AvatarImage src={getImageUrl(post.author.avatar)} />
+            <AvatarFallback>{post.author.username}</AvatarFallback>
           </Avatar>
           <div className='min-w-0 flex-1'>
             <div className='flex items-center justify-between'>
               <div className='flex flex-col'>
-                <span className='font-bold text-base'>{post.author?.username}</span>
-                <span className='text-muted-foreground text-sm'>{post.author?.handle}</span>
+                <span className='font-bold text-base'>{post.author.username}</span>
+                <span className='text-muted-foreground text-sm'>{post.author.handle}</span>
               </div>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -236,13 +191,13 @@ export function PostDetails({ post, onBack }: PostDetailsProps) {
                   media.type === "image" ? (
                     <img
                       key={index}
-                      src={media.url}
+                      src={getImageUrl(media.url)}
                       alt=''
                       className='w-full h-auto object-cover'
                     />
                   ) : (
                     <div key={index} className='aspect-v_ideo'>
-                      <VideoPlayer src={media.url} />
+                      <VideoPlayer src={getImageUrl(media.url)} />
                     </div>
                   )
                 )}
@@ -259,16 +214,18 @@ export function PostDetails({ post, onBack }: PostDetailsProps) {
                 variant='ghost'
                 size='sm'
                 onClick={() => handleLike()}
+                disabled={isLikeLoading}
                 className={cn(
                   "p-0 h-auto hover:bg-transparent group",
-                  isLiked && "text-red-500"
+                  likedPosts.has(post._id) && "text-red-500"
                 )}>
                 <Heart
-                  className={cn("h-5 w-5 mr-1 transition-colors", isLiked && "fill-current")}
+                  className={cn(
+                    "h-5 w-5 mr-1 transition-colors",
+                    likedPosts.has(post._id) && "fill-current"
+                  )}
                 />
-                <span className='text-sm group-hover:text-red-500'>
-                  {post.stats.likes + (isLiked ? 1 : 0)}
-                </span>
+                <span className='text-sm group-hover:text-red-500'>{post.stats.likes}</span>
               </Button>
               <Button
                 variant='ghost'
@@ -277,7 +234,7 @@ export function PostDetails({ post, onBack }: PostDetailsProps) {
                 className='p-0 h-auto hover:bg-transparent group'>
                 <MessageCircle className='h-5 w-5 mr-1 transition-colors' />
                 <span className='text-sm group-hover:text-blue-500'>
-                  {post.stats.comments + replies.length}
+                  {post.stats.comments + comments.length}
                 </span>
               </Button>
               <Button
@@ -303,92 +260,115 @@ export function PostDetails({ post, onBack }: PostDetailsProps) {
         </div>
       </article>
       <div className='px-4'>
-        <div className='relative'>
-          {replies.map((reply, index) => (
-            <div
-              key={reply._id}
-              className={cn(
-                "relative py-3 transition-colors duration-200 hover:bg-muted/30",
-                index !== replies.length - 1 && "border-b border-border"
-              )}>
-              <div className='flex gap-3'>
-                <div className='flex flex-col items-center'>
-                  <Avatar className='h-10 w-10 transition-transform duration-200 hover:scale-105'>
-                    <AvatarImage src={reply.author?.avatar} />
-                    <AvatarFallback>{reply.author?.username}</AvatarFallback>
-                  </Avatar>
-                  {index !== replies.length - 1 && (
-                    <div className='w-0.5 flex-1 bg-border/50 mt-2 relative'>
-                      <div className='absolute inset-0 bg-gradient-to-b from-background to-transparent h-4 top-0' />
-                    </div>
-                  )}
-                </div>
-                <div className='flex-1 min-w-0'>
-                  <div className='flex items-center gap-1 text-sm'>
-                    <span className='font-bold hover:underline cursor-pointer transition-colors'>
-                      {reply.author?.username}
-                    </span>
-                    <span className='text-muted-foreground hover:underline cursor-pointer transition-colors'>
-                      {reply.author?.handle}
-                    </span>
-                    <span className='text-muted-foreground'>·</span>
-                    <span className='text-muted-foreground hover:underline cursor-pointer transition-colors'>
-                      {formatPostTime(reply.createdAt)}
-                    </span>
+        {isCommentsLoading ? (
+          <div className='flex items-center justify-center py-8'>
+            <Loader2 className='h-8 w-8 animate-spin' />
+          </div>
+        ) : comments.length === 0 ? (
+          <div className='text-center py-8 text-muted-foreground'>还没有评论，来说点什么吧</div>
+        ) : (
+          <div className='relative'>
+            {comments.map((comment, index) => (
+              <div
+                key={comment._id}
+                className={cn(
+                  "relative py-3 transition-colors duration-200 hover:bg-muted/30",
+                  index !== comments.length - 1 && "border-b border-border"
+                )}>
+                <div className='flex gap-3'>
+                  <div className='flex flex-col items-center'>
+                    <Avatar className='h-10 w-10 transition-transform duration-200 hover:scale-105'>
+                      <AvatarImage src={comment.author?.avatar} />
+                      <AvatarFallback>{comment.author?.username}</AvatarFallback>
+                    </Avatar>
+                    {index !== comments.length - 1 && (
+                      <div className='w-0.5 flex-1 bg-border/50 mt-2 relative'>
+                        <div className='absolute inset-0 bg-gradient-to-b from-background to-transparent h-4 top-0' />
+                      </div>
+                    )}
                   </div>
-                  {reply.replyTo && (
-                    <div className='text-sm text-muted-foreground mb-1'>
-                      回复
-                      <span className='text-primary'>{/* 回复指定用户的名称 */}</span>
+                  <div className='flex-1 min-w-0'>
+                    <div className='flex items-center gap-1 text-sm'>
+                      <span className='font-bold hover:underline cursor-pointer transition-colors'>
+                        {comment.author?.username}
+                      </span>
+                      <span className='text-muted-foreground hover:underline cursor-pointer transition-colors'>
+                        {comment.author?.handle}
+                      </span>
+                      <span className='text-muted-foreground'>·</span>
+                      <span className='text-muted-foreground hover:underline cursor-pointer transition-colors'>
+                        {formatPostTime(comment.createdAt)}
+                      </span>
                     </div>
-                  )}
-                  <p className='mt-1 break-words text-[15px] leading-normal text-foreground/90'>
-                    {reply.content}
-                  </p>
-                  <div className='flex items-center gap-6 mt-2'>
-                    <button
-                      onClick={() => handleLike(reply._id)}
-                      className='group flex items-center gap-1 text-muted-foreground transition-colors duration-200'>
-                      <div className='p-1.5 -ml-1.5 rounded-full transition-colors duration-200 group-hover:bg-red-100 group-hover:text-red-500'>
-                        <Heart className='h-4 w-4' />
+                    {comment.replyTo && (
+                      <div className='text-sm text-muted-foreground mb-1'>
+                        回复
+                        <span className='text-primary'>{/* 回复指定用户的名称 */}</span>
                       </div>
-                      <span className='text-xs transition-colors duration-200 group-hover:text-red-500'>
-                        {reply.stats?.likes}
-                      </span>
-                    </button>
-                    <button
-                      onClick={() => openReplyDialog(reply)}
-                      className='group flex items-center gap-1 text-muted-foreground transition-colors duration-200'>
-                      <div className='p-1.5 -ml-1.5 rounded-full transition-colors duration-200 group-hover:bg-blue-100 group-hover:text-blue-500'>
-                        <MessageCircle className='h-4 w-4' />
-                      </div>
-                      <span className='text-xs transition-colors duration-200 group-hover:text-blue-500'>
-                        {reply.stats?.replies}
-                      </span>
-                    </button>
-                    <button
-                      onClick={() => handleShare(reply._id)}
-                      className='group flex items-center gap-1 text-muted-foreground transition-colors duration-200'>
-                      <div className='p-1.5 -ml-1.5 rounded-full transition-colors duration-200 group-hover:bg-green-100 group-hover:text-green-500'>
-                        <Share2 className='h-4 w-4' />
-                      </div>
-                      <span className='text-xs transition-colors duration-200 group-hover:text-green-500'>
-                        {reply.stats?.shares}
-                      </span>
-                    </button>
+                    )}
+                    <p className='mt-1 break-words text-[15px] leading-normal text-foreground/90'>
+                      {comment.content}
+                    </p>
+                    <div className='flex items-center gap-6 mt-2'>
+                      <button
+                        onClick={() => handleLike(comment._id)}
+                        disabled={processingComments.has(comment._id)}
+                        className={cn(
+                          "group flex items-center gap-1",
+                          "text-muted-foreground transition-colors duration-200",
+                          comment._id && likedComments.has(comment._id) && "text-red-500"
+                        )}>
+                        <div className='p-1.5 -ml-1.5 rounded-full transition-colors duration-200 group-hover:bg-red-100 group-hover:text-red-500'>
+                          {processingComments.has(comment._id) ? (
+                            <Loader2 className='h-4 w-4 animate-spin' />
+                          ) : (
+                            <Heart
+                              className={cn(
+                                "h-4 w-4",
+                                comment._id && likedComments.has(comment._id) && "fill-current"
+                              )}
+                            />
+                          )}
+                        </div>
+                        <span className='text-xs transition-colors duration-200 group-hover:text-red-500'>
+                          {likeCounts.get(comment._id) || 0}
+                        </span>
+                      </button>
+                      <button
+                        onClick={() => openReplyDialog(comment)}
+                        className='group flex items-center gap-1 text-muted-foreground transition-colors duration-200'>
+                        <div className='p-1.5 -ml-1.5 rounded-full transition-colors duration-200 group-hover:bg-blue-100 group-hover:text-blue-500'>
+                          <MessageCircle className='h-4 w-4' />
+                        </div>
+                        <span className='text-xs transition-colors duration-200 group-hover:text-blue-500'>
+                          {comment.stats?.replies}
+                        </span>
+                      </button>
+                      <button
+                        onClick={() => handleShare(comment._id)}
+                        className='group flex items-center gap-1 text-muted-foreground transition-colors duration-200'>
+                        <div className='p-1.5 -ml-1.5 rounded-full transition-colors duration-200 group-hover:bg-green-100 group-hover:text-green-500'>
+                          <Share2 className='h-4 w-4' />
+                        </div>
+                        <span className='text-xs transition-colors duration-200 group-hover:text-green-500'>
+                          {comment.stats?.shares}
+                        </span>
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
       <ReplyDialog
-        open={replyDialogOpen}
-        onOpenChange={setReplyDialogOpen}
+        open={isDialogOpen}
+        onOpenChange={setIsDialogOpen}
         post={post}
-        replyTo={replyingTo}
-        onReply={handleReply}
+        replyTo={replyingTo ?? null}
+        onReply={handleComment}
+        currentUser={currentUser}
       />
     </div>
   );

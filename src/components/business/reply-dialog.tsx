@@ -8,8 +8,9 @@ import { Textarea } from "@/components/basic/textarea";
 import { Separator } from "@/components/basic/separator";
 import { VisuallyHidden } from "@/components/feedback/visually-hidden";
 import { Post } from "@/types/post";
+import { Author } from "@/types/user";
 import { Comment } from "@/types/comment";
-
+import { getImageUrl } from "@/utils/utils";
 function formatTime(timestamp: string): string {
   const date = new Date(timestamp);
   return new Intl.DateTimeFormat("zh-CN", {
@@ -28,11 +29,7 @@ interface ReplyDialogProps {
   post: Post;
   replyTo: Comment | null;
   onReply: (content: string, replyToId: string) => void;
-  currentUser?: {
-    username: string;
-    handle: string;
-    avatar: string;
-  };
+  currentUser: Author | null;
 }
 
 export function ReplyDialog({
@@ -41,11 +38,7 @@ export function ReplyDialog({
   post,
   replyTo,
   onReply,
-  currentUser = {
-    username: "当前用户",
-    handle: "@currentuser",
-    avatar: "/placeholder-avatar.jpg",
-  },
+  currentUser,
 }: ReplyDialogProps) {
   const [content, setContent] = React.useState("");
   const MAX_CHARS = 280;
@@ -67,8 +60,8 @@ export function ReplyDialog({
         <DialogHeader className='text-xl font-semibold border-b pb-3'>
           <DialogTitle asChild>
             <VisuallyHidden>
-              回复给 {replyTo ? replyTo.author?.username : post.author?.username} (
-              {replyTo ? replyTo.author?.handle : post.author?.handle})
+              回复给 {replyTo ? replyTo.author?.username : post.author.username} (
+              {replyTo ? replyTo.author?.handle : post.author.handle})
             </VisuallyHidden>
           </DialogTitle>
           {replyTo ? "回复评论" : "回复帖子"}
@@ -77,9 +70,11 @@ export function ReplyDialog({
           <div className='flex gap-4'>
             <div className='flex flex-col items-center gap-2'>
               <Avatar className='h-10 w-10'>
-                <AvatarImage src={replyTo ? replyTo.author?.avatar : post.author?.avatar} />
+                <AvatarImage
+                  src={getImageUrl(replyTo ? replyTo.author?.avatar : post.author.avatar)}
+                />
                 <AvatarFallback>
-                  {replyTo ? replyTo.author?.username : post.author?.username}
+                  {replyTo ? replyTo.author?.username : post.author.username}
                 </AvatarFallback>
               </Avatar>
               <div className='w-0.5 flex-1 bg-border' />
@@ -87,10 +82,7 @@ export function ReplyDialog({
             <div className='flex-1 min-w-0'>
               <div className='flex items-center gap-2'>
                 <span className='font-semibold'>
-                  {replyTo ? replyTo.author?.username : post.author?.username}
-                </span>
-                <span className='text-muted-foreground'>
-                  {replyTo ? replyTo.author?.handle : post.author?.handle}
+                  {replyTo ? replyTo.author?.username : post.author.username}
                 </span>
                 <span className='text-muted-foreground'>·</span>
                 <span className='text-muted-foreground'>
@@ -116,8 +108,8 @@ export function ReplyDialog({
           </div>
           <div className='flex gap-4 mt-4'>
             <Avatar className='h-10 w-10'>
-              <AvatarImage src={currentUser.avatar} />
-              <AvatarFallback>{currentUser.username}</AvatarFallback>
+              <AvatarImage src={getImageUrl(currentUser?.avatar)} />
+              <AvatarFallback>{currentUser?.username}</AvatarFallback>
             </Avatar>
             <div className='flex-1'>
               <Textarea

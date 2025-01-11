@@ -21,7 +21,7 @@ export default function DashboardPage() {
 
   const currentUser = user
     ? {
-        name: user.username,
+        username: user.username,
         handle: user._id,
         avatar: user.avatar,
       }
@@ -70,28 +70,16 @@ export default function DashboardPage() {
       {selectedPost ? (
         <PostDetails post={selectedPost} onBack={handleBackToList} />
       ) : (
-        <>
-          {currentUser && (
-            <div className='mx-auto w-full max-w-3xl rounded-xl bg-card p-4'>
-              <PostDialog
-                currentUser={currentUser}
-                onPost={() => {
-                  fetchPosts(); // 发布新帖子后刷新列表
-                }}
-              />
-            </div>
-          )}
-          <div className='mx-auto w-full max-w-3xl rounded-xl bg-background'>
-            <PostList
-              posts={posts}
-              isLoading={isLoading}
-              error={error}
-              onPostClick={handlePostClick}
-              currentUser={currentUser}
-              onRefresh={fetchPosts} // 添加刷新功能
-            />
-          </div>
-        </>
+        <div className='mx-auto w-full max-w-3xl rounded-xl bg-background'>
+          <PostList
+            posts={posts}
+            isLoading={isLoading}
+            error={error}
+            onPostClick={handlePostClick}
+            currentUser={currentUser}
+            onRefresh={fetchPosts} // 添加刷新功能
+          />
+        </div>
       )}
     </>
   );
