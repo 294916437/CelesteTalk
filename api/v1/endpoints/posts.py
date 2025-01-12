@@ -17,10 +17,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
-@router.post(
-    "", 
-    response_description="发布帖子",
-)
+@router.post("", response_description="发布帖子")
 async def create_post(
     files: list[UploadFile]  = [],
     data: str = Form(..., description="包含authorId、content等信息的JSON字符串")

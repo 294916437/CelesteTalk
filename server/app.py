@@ -5,7 +5,6 @@ from fastapi.responses import JSONResponse
 from starlette.middleware.cors import CORSMiddleware
 from server.init import initiate_database
 from api.v1.router import router as api_v1_router
-from middleware.response import CommonResponse
 from fastapi.staticfiles import StaticFiles
 
 app = FastAPI(
