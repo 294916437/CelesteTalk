@@ -107,7 +107,7 @@ export function PostItem({
       onClick={() => onPostClick(post)}>
       <div className='flex gap-4'>
         <Link
-          href={`/dashboard/profile/${post.author.handle.slice(1)}`}
+          href={`/dashboard/profile/${post.author.handle}`}
           onClick={(e) => e.stopPropagation()}>
           <Avatar className='h-10 w-10 transition-transform duration-200 hover:scale-105'>
             <AvatarImage src={getImageUrl(post.author.avatar)} />

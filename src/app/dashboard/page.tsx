@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { PostDialog } from "@/components/business/post-dialog";
 import { PostList } from "@/components/business/post-list";
 import { PostDetails } from "@/components/business/post-details";
 import { useUserStore } from "@/store/user.store";

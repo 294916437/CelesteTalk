@@ -11,6 +11,7 @@ import { UserPosts } from "@/components/business/user-posts";
 import { PostDetails } from "@/components/business/post-details";
 import { useUserStore } from "@/store/user.store";
 import { useProfile } from "@/hooks/user/use-profile";
+import { useUserPosts } from "@/hooks/post/useUserPost";
 // 获取用户数据
 
 export default function ProfilePage() {
@@ -19,12 +20,12 @@ export default function ProfilePage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [activeTab, setActiveTab] = useState("posts");
-  const [posts, setPosts] = useState<Post[]>([]);
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
-
+  const handle = params.handle as string;
   // 使用 useProfile hook
-  const { profile, loading, error } = useProfile(params.handle as string);
 
+  const { profile } = useProfile(handle);
+  const { posts, isLoading, error, setPosts, fetchUserPosts } = useUserPosts(handle || "");
   const currentUser = user
     ? {
         username: user.username,
@@ -32,10 +33,8 @@ export default function ProfilePage() {
         avatar: user.avatar,
       }
     : null;
-
   useEffect(() => {
     const postId = searchParams.get("postId");
-    const handle = params.handle;
     if (postId) {
       setSelectedPostId(postId);
     }
@@ -47,18 +46,18 @@ export default function ProfilePage() {
   const handlePostClick = (post: Post) => {
     setSelectedPostId(post._id);
     // 修改为带 handle 的路由
-    router.push(`/dashboard/profile/${params.handle}?postId=${post._id}`);
+    router.push(`/dashboard/profile/${handle}?postId=${post._id}`);
   };
   const handleBackToProfile = () => {
     setSelectedPostId(null);
     // 返回到对应用户的 profile 页
-    router.push(`/dashboard/profile/${params.handle}`);
+    router.push(`/dashboard/profile/${handle}`);
   };
 
   const selectedPost = posts.find((post) => post._id === selectedPostId);
 
   // 修改加载状态的处理
-  if (loading) {
+  if (isLoading) {
     return (
       <div className='flex items-center justify-center py-8'>
         <Loader2 className='h-8 w-8 animate-spin' />
@@ -86,10 +85,13 @@ export default function ProfilePage() {
             {activeTab === "posts" ? (
               <UserPosts
                 posts={posts}
+                error={error}
+                isLoading={isLoading}
                 onPostClick={handlePostClick}
                 onDeletePost={handleDeletePost}
                 setPosts={setPosts}
                 currentUser={currentUser}
+                onRefresh={fetchUserPosts}
               />
             ) : (
               <div className='px-4'>

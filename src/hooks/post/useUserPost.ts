@@ -35,7 +35,7 @@ export function useUserPosts(userId: string) {
     try {
       setIsLoading(true);
       setError(null);
-      const response = await PostService.deleteUserPost(postId);
+      const response = await PostService.deleteUserPost(postId, userId);
       if (response.code === 200) {
         toast.success("删除成功");
         setPosts(posts.filter((post) => post._id !== postId));

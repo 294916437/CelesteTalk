@@ -22,7 +22,6 @@ export function useLogin() {
 
       // 给一个小延迟确保存储完成
       await new Promise((resolve) => setTimeout(resolve, 100));
-
       toast.success(`欢迎回来, ${data.user.username}!`);
       router.replace("/dashboard");
     },

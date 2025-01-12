@@ -13,8 +13,8 @@ export class PostService {
   static async getUserPost(id: string): Promise<ApiResponse> {
     return HttpClient.get(`/posts/user/${id}`);
   }
-  static async deleteUserPost(id: string): Promise<ApiResponse> {
-    return HttpClient.get(`/posts/${id}`);
+  static async deleteUserPost(postId: string, _id: string): Promise<ApiResponse> {
+    return HttpClient.delete(`/posts/${postId}`, { data: { _id } });
   }
   static async createPost(data: CreatePostData, files?: File[]): Promise<ApiResponse> {
     const formData = new FormData();
